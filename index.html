@@ -46,10 +46,7 @@
     #btn:hover { background: var(--accent2); }
     #btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
-    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 18px; }
     .stat { background: var(--surface2); border-radius: var(--r); padding: 14px 16px; }
-    .stat-label { font-size: 10px; font-family: 'IBM Plex Mono', monospace; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
-    .stat-value { font-size: 22px; font-family: 'IBM Plex Mono', monospace; font-weight: 600; }
     .col-green { color: var(--green); }
     .col-amber { color: var(--amber); }
 
@@ -71,6 +68,8 @@
     .tab-btn { padding: 10px 20px; font-size: 13px; font-family: 'IBM Plex Mono', monospace; border: none; border-bottom: 2px solid transparent; background: transparent; color: var(--muted); cursor: pointer; transition: all 0.15s; margin-bottom: -1px; }
     .tab-btn:hover { color: var(--text); }
     .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .tab-count { font-size: 11px; font-family: 'IBM Plex Mono', monospace; background: var(--surface2); border-radius: 10px; padding: 1px 7px; margin-left: 4px; color: var(--muted); }
+    .tab-btn.active .tab-count { background: rgba(200,181,96,0.15); }
     .search-wrap { margin-left: 8px; }
 
     .player-list { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
@@ -125,27 +124,17 @@
     <div class="tour-title" id="tourTitle"></div>
     <div class="tour-meta" id="tourMeta"></div>
 
-    <div class="stats-grid">
-      <div class="stat"><div class="stat-label">Toplam</div><div class="stat-value" id="sTotal">—</div></div>
-      <div class="stat"><div class="stat-label">Tamamladı</div><div class="stat-value col-green" id="sDone">—</div></div>
-      <div class="stat"><div class="stat-label">Kısmi</div><div class="stat-value col-amber" id="sPartial">—</div></div>
-      <div class="stat"><div class="stat-label">Oran</div><div class="stat-value" id="sRate">—</div></div>
-    </div>
-
-    <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
-
     <div id="noteBox" class="note" style="display:none;"></div>
 
     <div class="tab-bar">
-      <button class="tab-btn active" id="tab-all" onclick="setTab('all')">Tüm Oyuncular</button>
-      <button class="tab-btn" id="tab-completed" onclick="setTab('completed')">Tüm Turları Oynayanlar</button>
+      <button class="tab-btn active" id="tab-all" onclick="setTab('all')">
+        Tüm Oyuncular <span class="tab-count" id="cnt-all"></span>
+      </button>
+      <button class="tab-btn" id="tab-completed" onclick="setTab('completed')">
+        Tüm Turları Oynayanlar <span class="tab-count col-green" id="cnt-completed"></span>
+      </button>
       <button class="tab-btn" id="tab-custom" onclick="setTab('custom')">
-        En Az
-        <input type="number" id="customMin" value="5" min="1" max="99"
-          style="width:38px;padding:1px 4px;font-size:12px;font-family:inherit;background:var(--bg);border:1px solid var(--border2);border-radius:4px;color:var(--text);text-align:center;margin:0 3px;"
-          onclick="event.stopPropagation()"
-          oninput="if(currentFilter==='custom') renderList()" />
-        Oyun
+        En Az X Oyun <span class="tab-count col-amber" id="cnt-custom"></span>
       </button>
       <div style="flex:1"></div>
       <div class="search-wrap">
@@ -153,6 +142,16 @@
       </div>
       <button class="copy-btn" onclick="copyCompleted()">⊕ Listeyi Kopyala</button>
     </div>
+
+    <div id="custom-panel" style="display:none; padding:12px 16px; background:var(--surface2); border-bottom:1px solid var(--border); display:none; align-items:center; gap:10px;">
+      <span style="font-size:13px; font-family:'IBM Plex Mono',monospace; color:var(--muted);">En az kaç oyun:</span>
+      <input type="number" id="customMin" value="5" min="1" max="99"
+        style="width:70px; font-family:'IBM Plex Mono',monospace; font-size:13px;"
+        oninput="updateCustomCount(); renderList()" />
+      <span style="font-size:12px; color:var(--muted); font-family:'IBM Plex Mono',monospace;" id="custom-result-label"></span>
+    </div>
+
+    <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
 
     <div class="player-list">
       <div class="list-header">
@@ -197,6 +196,8 @@ function setTab(t) {
   document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
   const el = document.getElementById('tab-' + t);
   if (el) el.classList.add('active');
+  const panel = $('custom-panel');
+  if (panel) panel.style.display = t === 'custom' ? 'flex' : 'none';
   if (t === 'custom') setTimeout(() => $('customMin').focus(), 50);
   renderList();
 }
@@ -228,14 +229,19 @@ function renderList() {
 }
 function updateStats() {
   const done = allPlayers.filter(p => pStatus(p) === 'done').length;
-  const partial = allPlayers.filter(p => pStatus(p) === 'partial').length;
   const total = allPlayers.length;
   const rate = total ? Math.round(done / total * 100) : 0;
-  $('sTotal').textContent = total;
-  $('sDone').textContent = done;
-  $('sPartial').textContent = partial;
-  $('sRate').textContent = rate + '%';
+  $('cnt-all').textContent = total;
+  $('cnt-completed').textContent = done;
   $('progressFill').style.width = rate + '%';
+  updateCustomCount();
+}
+function updateCustomCount() {
+  const min = parseInt($('customMin')?.value) || 1;
+  const cnt = allPlayers.filter(p => (p._g ?? 0) >= min).length;
+  $('cnt-custom').textContent = cnt;
+  const lbl = $('custom-result-label');
+  if (lbl) lbl.textContent = `→ ${cnt} oyuncu`;
 }
 function setLoading(msg) {
   $('listBody').innerHTML = `<div class="loading-row"><div class="spinner"></div>${msg}</div>`;
@@ -385,7 +391,7 @@ function copyCompleted() {
 $('url').addEventListener('keydown', e => { if (e.key === 'Enter') loadData(); });
 </script>
 <div style="text-align:center; padding: 24px 0 8px; font-family:'IBM Plex Mono',monospace; font-size:11px; color:#444;">
-  son güncelleme: <span style="color:#666;">17.05.2026 01:30 UTC</span> &nbsp;·&nbsp; build <span style="color:#c8b560;">v7</span>
+  son güncelleme: <span style="color:#666;">17.05.2026 01:30 UTC</span> &nbsp;·&nbsp; build <span style="color:#c8b560;">v8</span>
 </div>
 </body>
 </html>
