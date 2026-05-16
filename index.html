@@ -86,6 +86,7 @@
     .badge-done { background: rgba(92,186,125,0.15); color: var(--green); }
     .badge-partial { background: rgba(212,168,48,0.15); color: var(--amber); }
     .badge-absent { background: rgba(217,96,96,0.1); color: var(--red); }
+    .badge-loading { background: rgba(136,136,136,0.1); color: var(--muted); }
 
     .note { font-size: 12px; color: var(--muted); font-family: 'IBM Plex Mono', monospace; padding: 10px 14px; background: var(--surface2); border-left: 2px solid var(--accent); margin-bottom: 16px; }
     .error-box { padding: 14px 16px; background: rgba(217,96,96,0.07); border: 1px solid rgba(217,96,96,0.2); border-radius: var(--r); color: var(--red); font-family: 'IBM Plex Mono', monospace; font-size: 13px; white-space: pre-line; }
@@ -217,9 +218,7 @@ function parseNDJSON(t) {
 }
 function pStatus(p) {
   const g = p._g ?? 0;
-  // done = tüm turları oynadı (kazandı/kaybetti/berabere farketmez)
-  // partial = bazı turları oynadı
-  // absent = hiç oynamadı
+  if (g === -1) return 'loading';
   if (g >= maxR) return 'done';
   if (g > 0) return 'partial';
   return 'absent';
@@ -254,8 +253,8 @@ function renderList() {
   if (!data.length) { $('listBody').innerHTML = '<div class="empty">Oyuncu bulunamadı.</div>'; return; }
   $('listBody').innerHTML = data.map((p, i) => {
     const s = pStatus(p);
-    const bc = s === 'done' ? 'badge-done' : s === 'partial' ? 'badge-partial' : 'badge-absent';
-    const bt = s === 'done' ? 'DONE' : s === 'partial' ? `${p._g}/${maxR}` : 'YOK';
+    const bc = s === 'done' ? 'badge-done' : s === 'partial' ? 'badge-partial' : s === 'loading' ? 'badge-loading' : 'badge-absent';
+    const bt = s === 'done' ? 'DONE' : s === 'partial' ? `${p._g}/${maxR}` : p._g === -1 ? '...' : 'YOK';
     return `<div class="player-row">
       <div class="rank">${i+1}</div>
       <div class="pname"><a href="https://lichess.org/@/${p._n}" target="_blank">${p._n}</a></div>
@@ -325,7 +324,7 @@ async function loadData() {
       $('tourTitle').textContent = info.name || 'Swiss Turnuvası';
       $('tourMeta').textContent = `Swiss · ${maxR} tur · Mevcut tur: ${curRound} · ${info.nbPlayers ?? '?'} oyuncu`;
 
-      // 1) Oyuncu listesi ve puanlar — /results (NDJSON)
+      // AŞAMA 1: Oyuncu listesi hızlıca göster
       setLoading('Oyuncu listesi çekiliyor...');
       const res = await fetch(`https://lichess.org/api/swiss/${id}/results?nb=9999`);
       if (!res.ok) throw new Error(`Sonuçlar alınamadı (HTTP ${res.status})`);
@@ -333,55 +332,72 @@ async function loadData() {
       const raw = parseNDJSON(text);
       if (!raw.length) throw new Error('Henüz sonuç yok. Turnuva başlamamış olabilir.');
 
-      // Oyuncu map (lowercase key → obje)
       const playerMap = {};
       raw.forEach(p => {
         const name = p.username || p.name || '?';
         playerMap[name.toLowerCase()] = {
-          _n: name,
-          _r: p.rating || '',
-          _s: p.points ?? p.score ?? 0,
-          _g: 0,
+          _n: name, _r: p.rating || '', _s: p.points ?? 0, _g: -1,
         };
       });
 
-      // 2) Oyun sayısı — /games stream olarak oku, geldikçe parse et
-      setLoading('Oyun verileri çekiliyor...');
-      const gRes = await fetch(`https://lichess.org/api/swiss/${id}/games?moves=false&clocks=false&evals=false&opening=false`);
-      if (gRes.ok) {
+      // Aşama 1 bitti — listeyi hemen göster (_g=-1 = "yükleniyor")
+      allPlayers = Object.values(playerMap);
+      updateStats();
+      setTab('all');
+      $('searchInput').value = '';
+      resetRaffle();
+      const _elapsed1 = ((performance.now() - _t0) / 1000).toFixed(1);
+      $('tourMeta').textContent += ` · ⏱ liste: ${_elapsed1}s`;
+      $('noteBox').textContent = '⏳ Oyun verileri arka planda yükleniyor... Tamamlayanlar sekmesi hazırlanıyor.';
+      $('noteBox').style.display = 'block';
+      btn.disabled = false;
+
+      // AŞAMA 2: PGN stream arka planda — listeyi bloklamadan
+      (async () => {
+        const gRes = await fetch(`https://lichess.org/api/swiss/${id}/games?moves=false&clocks=false&evals=false&opening=false`);
+        if (!gRes.ok) {
+          $('noteBox').textContent = '⚠ Oyun verisi alınamadı. Oynanma sayıları hesaplanamadı.';
+          return;
+        }
         const reader = gRes.body.getReader();
         const decoder = new TextDecoder();
-        let buffer = '';
-        let gameCount = 0;
+        let buffer = '', gameCount = 0;
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
           buffer += decoder.decode(value, { stream: true });
-          // White/Black taglarını buldukça say, işlenenleri buffer'dan temizle
           const lines = buffer.split('\n');
-          buffer = lines.pop(); // son yarım satırı sakla
+          buffer = lines.pop();
           for (const line of lines) {
             if (line.startsWith('[White "')) {
               const key = line.slice(8, -2).toLowerCase();
-              if (playerMap[key]) playerMap[key]._g++;
+              if (playerMap[key]) playerMap[key]._g === -1 ? playerMap[key]._g = 1 : playerMap[key]._g++;
             } else if (line.startsWith('[Black "')) {
               const key = line.slice(8, -2).toLowerCase();
-              if (playerMap[key]) { playerMap[key]._g++; gameCount++; }
-              if (gameCount % 50 === 0) setLoading(`${gameCount} oyun işlendi...`);
+              if (playerMap[key]) { playerMap[key]._g === -1 ? playerMap[key]._g = 1 : playerMap[key]._g++; gameCount++; }
+              if (gameCount % 200 === 0) {
+                $('noteBox').textContent = `⏳ ${gameCount} oyun işlendi, devam ediyor...`;
+                allPlayers = Object.values(playerMap);
+                updateStats(); renderList();
+              }
             }
           }
         }
-        // buffer'da kalan son satır
-        if (buffer.startsWith('[White "')) {
-          const key = buffer.slice(8, -2).toLowerCase();
-          if (playerMap[key]) playerMap[key]._g++;
-        } else if (buffer.startsWith('[Black "')) {
-          const key = buffer.slice(8, -2).toLowerCase();
-          if (playerMap[key]) playerMap[key]._g++;
-        }
-      }
+        // Kalan buffer
+        if (buffer.startsWith('[White "')) { const k=buffer.slice(8,-2).toLowerCase(); if(playerMap[k]) playerMap[k]._g===−1?playerMap[k]._g=1:playerMap[k]._g++; }
+        else if (buffer.startsWith('[Black "')) { const k=buffer.slice(8,-2).toLowerCase(); if(playerMap[k]) playerMap[k]._g===−1?playerMap[k]._g=1:playerMap[k]._g++; }
 
-      allPlayers = Object.values(playerMap);
+        // 0 oyun görünenleri düzelt (_g hala -1 ise hiç oynamamış)
+        Object.values(playerMap).forEach(p => { if (p._g === -1) p._g = 0; });
+        allPlayers = Object.values(playerMap);
+        updateStats(); renderList();
+        const _elapsed2 = ((performance.now() - _t0) / 1000).toFixed(1);
+        $('noteBox').textContent = `✓ Tüm veriler yüklendi. Toplam süre: ${_elapsed2}s · ${gameCount} oyun işlendi.`;
+        updateRaffleInfo();
+      })();
+
+      // Aşama 2 arka planda, ana akış burada biter
+      return;
 
     } else {
       setLoading('Arena turnuva bilgileri alınıyor...');
@@ -464,7 +480,7 @@ function getActivePool() {
       return (p._g ?? 0) >= min;
     }
     return true;
-  }).filter(p => !raffleDrawn.has(p._n));
+  }).filter(p => !raffleDrawn.has(p._n) && p._g !== -1);
 }
 
 function updateRaffleInfo() {
@@ -532,7 +548,7 @@ function copyRaffle() {
 }
 </script>
 <div style="text-align:center; padding: 24px 0 8px; font-family:'IBM Plex Mono',monospace; font-size:11px; color:#444;">
-  son güncelleme: <span style="color:#666;">17.05.2026 01:30 UTC</span> &nbsp;·&nbsp; build <span style="color:#c8b560;">v1.0.9</span>
+  son güncelleme: <span style="color:#666;">17.05.2026 01:30 UTC</span> &nbsp;·&nbsp; build <span style="color:#c8b560;">v13</span>
 </div>
 </body>
 </html>
