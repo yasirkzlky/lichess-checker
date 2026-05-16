@@ -36,8 +36,6 @@
     input::placeholder { color: #444; }
 
     .input-row { display: grid; grid-template-columns: 1fr auto; gap: 10px; margin-top: 14px; align-items: end; }
-    .rounds-wrap { display: flex; flex-direction: column; }
-    .rounds-wrap input { width: 100%; }
 
     #btn {
       padding: 10px 22px; background: var(--accent); color: #0e0e0e;
@@ -69,6 +67,11 @@
     .search-wrap input { padding: 6px 12px; font-size: 12px; }
     .copy-btn { padding: 6px 14px; font-size: 12px; font-family: 'IBM Plex Mono', monospace; border: 1px solid var(--border2); background: transparent; color: var(--muted); border-radius: var(--r); cursor: pointer; transition: all 0.15s; }
     .copy-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .tab-bar { display: flex; gap: 0; margin-bottom: 0; flex-wrap: wrap; align-items: center; border-bottom: 1px solid var(--border); }
+    .tab-btn { padding: 10px 20px; font-size: 13px; font-family: 'IBM Plex Mono', monospace; border: none; border-bottom: 2px solid transparent; background: transparent; color: var(--muted); cursor: pointer; transition: all 0.15s; margin-bottom: -1px; }
+    .tab-btn:hover { color: var(--text); }
+    .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .search-wrap { margin-left: 8px; }
 
     .player-list { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
     .list-header { display: grid; grid-template-columns: 40px 1fr 80px 70px 100px; padding: 10px 16px; border-bottom: 1px solid var(--border); font-size: 10px; font-family: 'IBM Plex Mono', monospace; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
@@ -113,11 +116,7 @@
   <div class="card">
     <label>Turnuva Linki</label>
     <input type="text" id="url" placeholder="https://lichess.org/swiss/xxxx  veya  /tournament/xxxx" />
-    <div class="input-row">
-      <div class="rounds-wrap">
-        <label style="margin-top:12px;">Swiss Round Sayısı <span style="color:#555;font-size:10px;">(API'den otomatik alınır, yoksa bu kullanılır)</span></label>
-        <input type="number" id="rounds" value="9" min="1" max="30" style="width:120px;" />
-      </div>
+    <div style="margin-top:12px;">
       <button id="btn" onclick="loadData()">▶ Kontrol Et</button>
     </div>
   </div>
@@ -137,15 +136,14 @@
 
     <div id="noteBox" class="note" style="display:none;"></div>
 
-    <div class="toolbar">
-      <button class="filter-btn active" onclick="setFilter('all')">Tümü</button>
-      <button class="filter-btn" onclick="setFilter('completed')">✓ Tamamladı</button>
-      <button class="filter-btn" onclick="setFilter('partial')">◑ Kısmi</button>
-      <button class="filter-btn" onclick="setFilter('absent')">✗ Oynamadı</button>
+    <div class="tab-bar">
+      <button class="tab-btn active" id="tab-all" onclick="setTab('all')">Tüm Oyuncular</button>
+      <button class="tab-btn" id="tab-completed" onclick="setTab('completed')">Tüm Turları Oynayanlar</button>
+      <div style="flex:1"></div>
       <div class="search-wrap">
         <input type="text" id="searchInput" placeholder="Oyuncu ara..." oninput="renderList()" />
       </div>
-      <button class="copy-btn" onclick="copyCompleted()">⊕ Tamamlayanları Kopyala</button>
+      <button class="copy-btn" onclick="copyCompleted()">⊕ Listeyi Kopyala</button>
     </div>
 
     <div class="player-list">
@@ -186,20 +184,19 @@ function pStatus(p) {
   if (g > 0) return 'partial';
   return 'absent';
 }
-function setFilter(f) {
-  currentFilter = f;
-  document.querySelectorAll('.filter-btn').forEach((el, i) =>
-    el.classList.toggle('active', ['all','completed','partial','absent'][i] === f)
-  );
+function setTab(t) {
+  currentFilter = t;
+  document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+  const el = document.getElementById('tab-' + t);
+  if (el) el.classList.add('active');
   renderList();
 }
+function setFilter(f) { setTab(f); }
 function renderList() {
   const q = ($('searchInput').value || '').toLowerCase();
   const data = allPlayers.filter(p => {
     if (q && !p._n.toLowerCase().includes(q)) return false;
     if (currentFilter === 'completed') return pStatus(p) === 'done';
-    if (currentFilter === 'partial') return pStatus(p) === 'partial';
-    if (currentFilter === 'absent') return pStatus(p) === 'absent';
     return true;
   });
   if (!data.length) { $('listBody').innerHTML = '<div class="empty">Oyuncu bulunamadı.</div>'; return; }
@@ -265,50 +262,49 @@ async function loadData() {
       if (!infoRes.ok) throw new Error(`Turnuva bulunamadı (HTTP ${infoRes.status})\nID: ${id}`);
       const info = await infoRes.json();
 
-      maxR = info.nbRounds || parseInt($('rounds').value) || 9;
+      maxR = info.nbRounds || 9;
       const curRound = info.round || '?';
       $('tourTitle').textContent = info.name || 'Swiss Turnuvası';
       $('tourMeta').textContent = `Swiss · ${maxR} tur · Mevcut tur: ${curRound} · ${info.nbPlayers ?? '?'} oyuncu`;
 
-      setLoading(`Oyuncu sonuçları çekiliyor...`);
+      // 1) Oyuncu listesi ve puanlar — /results (NDJSON)
+      setLoading('Oyuncu listesi çekiliyor...');
       const res = await fetch(`https://lichess.org/api/swiss/${id}/results?nb=9999`);
       if (!res.ok) throw new Error(`Sonuçlar alınamadı (HTTP ${res.status})`);
       const text = await res.text();
       const raw = parseNDJSON(text);
       if (!raw.length) throw new Error('Henüz sonuç yok. Turnuva başlamamış olabilir.');
 
-      // sheet.scores: her tur için 'w','d','l' (oynandı) ya da 'b','a','z' (oynamadı/bye)
-      function countPlayed(p) {
-        const sc = p.sheet?.scores;
-        if (!sc) return null;
-        // scores bir array of objects: [{o:'w'}, {o:'l'}...] ya da string array ya da string
-        if (Array.isArray(sc)) {
-          return sc.filter(s => {
-            const c = (typeof s === 'object' ? (s.o ?? s.r ?? '') : String(s)).toLowerCase();
-            return c === 'w' || c === 'd' || c === 'l';
-          }).length;
-        }
-        if (typeof sc === 'string') {
-          return (sc.match(/[wdlWDL]/g) || []).length;
-        }
-        return null;
-      }
-
-      allPlayers = raw.map(p => {
-        const played = countPlayed(p);
-        return {
-          _n: p.username || p.name || '?',
+      // Oyuncu map (lowercase key → obje)
+      const playerMap = {};
+      raw.forEach(p => {
+        const name = p.username || p.name || '?';
+        playerMap[name.toLowerCase()] = {
+          _n: name,
           _r: p.rating || '',
           _s: p.points ?? p.score ?? 0,
-          _g: played ?? p.nbGames ?? p.nb?.game ?? 0,
+          _g: 0,
         };
       });
 
-      const hasGameData = allPlayers.some(p => p._g > 0);
-      if (!hasGameData) {
-        $('noteBox').textContent = '⚠ API oyun sayısı döndürmedi. Turnuva bitmemişse sonuçlar eksik olabilir.';
-        $('noteBox').style.display = 'block';
+      // 2) Oyun sayısı — /games PGN'den White/Black taglarını say
+      setLoading('Oyun verileri çekiliyor...');
+      const gRes = await fetch(`https://lichess.org/api/swiss/${id}/games?moves=false`);
+      if (gRes.ok) {
+        const pgn = await gRes.text();
+        const whiteMatches = pgn.matchAll(/\[White "([^"]+)"\]/g);
+        const blackMatches = pgn.matchAll(/\[Black "([^"]+)"\]/g);
+        for (const m of whiteMatches) {
+          const key = m[1].toLowerCase();
+          if (playerMap[key]) playerMap[key]._g++;
+        }
+        for (const m of blackMatches) {
+          const key = m[1].toLowerCase();
+          if (playerMap[key]) playerMap[key]._g++;
+        }
       }
+
+      allPlayers = Object.values(playerMap);
 
     } else {
       setLoading('Arena turnuva bilgileri alınıyor...');
@@ -342,7 +338,7 @@ async function loadData() {
 
     updateStats();
     currentFilter = 'all';
-    document.querySelectorAll('.filter-btn').forEach((el, i) => el.classList.toggle('active', i === 0));
+    setTab('all');
     $('searchInput').value = '';
     renderList();
 
@@ -353,17 +349,26 @@ async function loadData() {
 }
 
 function copyCompleted() {
-  const names = allPlayers.filter(p => pStatus(p) === 'done').map(p => p._n).join('\n');
-  if (!names) { alert('Tamamlayan oyuncu yok.'); return; }
+  const q = ($('searchInput').value || '').toLowerCase();
+  const data = allPlayers.filter(p => {
+    if (q && !p._n.toLowerCase().includes(q)) return false;
+    if (currentFilter === 'completed') return pStatus(p) === 'done';
+    return true;
+  });
+  const names = data.map(p => p._n).join('\n');
+  if (!names) { alert('Oyuncu yok.'); return; }
   navigator.clipboard.writeText(names).then(() => {
     const b = document.querySelector('.copy-btn');
-    const old = b.textContent;
+    const prev = b.textContent;
     b.textContent = '✓ Kopyalandı!';
-    setTimeout(() => b.textContent = old, 2000);
+    setTimeout(() => b.textContent = prev, 2000);
   });
 }
 
 $('url').addEventListener('keydown', e => { if (e.key === 'Enter') loadData(); });
 </script>
+<div style="text-align:center; padding: 24px 0 8px; font-family:'IBM Plex Mono',monospace; font-size:11px; color:#444;">
+  son güncelleme: <span style="color:#666;">17.05.2026 01:30 UTC</span> &nbsp;·&nbsp; build <span style="color:#c8b560;">v6</span>
+</div>
 </body>
 </html>
