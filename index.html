@@ -152,6 +152,9 @@
       <button class="tab-btn" id="tab-completed" onclick="setTab('completed')">
         Tüm Turları Oynayanlar <span class="tab-count col-green" id="cnt-completed"></span>
       </button>
+      <button class="tab-btn" id="tab-lastround" onclick="setTab('lastround')">
+        Son Turu Oynayanlar <span class="tab-count col-amber" id="cnt-lastround"></span>
+      </button>
       <button class="tab-btn" id="tab-custom" onclick="setTab('custom')">
         En Az <span id="tab-custom-label">5</span> Oyun <span class="tab-count col-amber" id="cnt-custom"></span>
       </button>
@@ -244,6 +247,7 @@ function renderList() {
   const data = allPlayers.filter(p => {
     if (q && !p._n.toLowerCase().includes(q)) return false;
     if (currentFilter === 'completed') return pStatus(p) === 'done';
+    if (currentFilter === 'lastround') return p._lastRound === true;
     if (currentFilter === 'custom') {
       const min = parseInt($('customMin')?.value) || 1;
       return (p._g ?? 0) >= min;
@@ -270,6 +274,9 @@ function updateStats() {
   const rate = total ? Math.round(done / total * 100) : 0;
   $('cnt-all').textContent = total;
   $('cnt-completed').textContent = done;
+  const lastround = allPlayers.filter(p => p._lastRound === true).length;
+  const cntLR = $('cnt-lastround');
+  if (cntLR) cntLR.textContent = lastround;
   $('progressFill').style.width = rate + '%';
   updateCustomCount();
 }
@@ -336,7 +343,7 @@ async function loadData() {
       raw.forEach(p => {
         const name = p.username || p.name || '?';
         playerMap[name.toLowerCase()] = {
-          _n: name, _r: p.rating || '', _s: p.points ?? 0, _g: -1,
+          _n: name, _r: p.rating || '', _s: p.points ?? 0, _g: -1, _lastRound: false,
         };
       });
 
@@ -362,6 +369,7 @@ async function loadData() {
         const reader = gRes.body.getReader();
         const decoder = new TextDecoder();
         let buffer = '', gameCount = 0;
+        const gameOrder = []; // her oyunun white+black sırasıyla
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
@@ -371,9 +379,11 @@ async function loadData() {
           for (const line of lines) {
             if (line.startsWith('[White "')) {
               const key = line.slice(8, -2).toLowerCase();
+              gameOrder.push(key);
               if (playerMap[key]) playerMap[key]._g === -1 ? playerMap[key]._g = 1 : playerMap[key]._g++;
             } else if (line.startsWith('[Black "')) {
               const key = line.slice(8, -2).toLowerCase();
+              gameOrder.push(key);
               if (playerMap[key]) { playerMap[key]._g === -1 ? playerMap[key]._g = 1 : playerMap[key]._g++; gameCount++; }
               if (gameCount % 200 === 0) {
                 $('noteBox').textContent = `⏳ ${gameCount} oyun işlendi, devam ediyor...`;
@@ -384,11 +394,16 @@ async function loadData() {
           }
         }
         // Kalan buffer
-        if (buffer.startsWith('[White "')) { const k=buffer.slice(8,-2).toLowerCase(); if(playerMap[k]) playerMap[k]._g===−1?playerMap[k]._g=1:playerMap[k]._g++; }
-        else if (buffer.startsWith('[Black "')) { const k=buffer.slice(8,-2).toLowerCase(); if(playerMap[k]) playerMap[k]._g===−1?playerMap[k]._g=1:playerMap[k]._g++; }
+        if (buffer.startsWith('[White "')) { const k=buffer.slice(8,-2).toLowerCase(); if(playerMap[k]) { if(playerMap[k]._g === -1) playerMap[k]._g = 1; else playerMap[k]._g++; } }
+        else if (buffer.startsWith('[Black "')) { const k=buffer.slice(8,-2).toLowerCase(); if(playerMap[k]) { if(playerMap[k]._g === -1) playerMap[k]._g = 1; else playerMap[k]._g++; } }
 
         // 0 oyun görünenleri düzelt (_g hala -1 ise hiç oynamamış)
         Object.values(playerMap).forEach(p => { if (p._g === -1) p._g = 0; });
+
+        // Son tur oynayanları belirle: son round'daki oyunlar = gameOrder'ın son (totalGames/maxR) kısmı
+        const gamesPerRound = Math.round(gameCount / maxR);
+        const lastRoundPlayers = new Set(gameOrder.slice(-gamesPerRound * 2));
+        lastRoundPlayers.forEach(name => { if (playerMap[name]) playerMap[name]._lastRound = true; });
         allPlayers = Object.values(playerMap);
         updateStats(); renderList();
         const _elapsed2 = ((performance.now() - _t0) / 1000).toFixed(1);
@@ -440,8 +455,8 @@ async function loadData() {
 
   } catch (e) {
     showError(e.message);
+    btn.disabled = false;
   }
-  btn.disabled = false;
 }
 
 function copyCompleted() {
@@ -449,6 +464,7 @@ function copyCompleted() {
   const data = allPlayers.filter(p => {
     if (q && !p._n.toLowerCase().includes(q)) return false;
     if (currentFilter === 'completed') return pStatus(p) === 'done';
+    if (currentFilter === 'lastround') return p._lastRound === true;
     if (currentFilter === 'custom') {
       const min = parseInt($('customMin')?.value) || 1;
       return (p._g ?? 0) >= min;
@@ -475,6 +491,7 @@ function getActivePool() {
   return allPlayers.filter(p => {
     if (q && !p._n.toLowerCase().includes(q)) return false;
     if (currentFilter === 'completed') return pStatus(p) === 'done';
+    if (currentFilter === 'lastround') return p._lastRound === true;
     if (currentFilter === 'custom') {
       const min = parseInt($('customMin')?.value) || 1;
       return (p._g ?? 0) >= min;
@@ -490,6 +507,7 @@ function updateRaffleInfo() {
   const pool = getActivePool();
   const total = allPlayers.filter(p => {
     if (currentFilter === 'completed') return pStatus(p) === 'done';
+    if (currentFilter === 'lastround') return p._lastRound === true;
     if (currentFilter === 'custom') {
       const min = parseInt($('customMin')?.value) || 1;
       return (p._g ?? 0) >= min;
@@ -548,7 +566,7 @@ function copyRaffle() {
 }
 </script>
 <div style="text-align:center; padding: 24px 0 8px; font-family:'IBM Plex Mono',monospace; font-size:11px; color:#444;">
-  son güncelleme: <span style="color:#666;">17.05.2026 01:30 UTC</span> &nbsp;·&nbsp; build <span style="color:#c8b560;">v13</span>
+  son güncelleme: <span style="color:#666;">17.05.2026 01:30 UTC</span> &nbsp;·&nbsp; build <span style="color:#c8b560;">v14</span>
 </div>
 </body>
 </html>
