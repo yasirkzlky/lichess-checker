@@ -295,6 +295,7 @@ async function loadData() {
   if (!urlVal) { $('url').focus(); return; }
 
   const btn = $('btn');
+  const _t0 = performance.now();
   btn.disabled = true;
   allPlayers = [];
   $('results').style.display = 'block';
@@ -344,19 +345,38 @@ async function loadData() {
         };
       });
 
-      // 2) Oyun sayısı — /games PGN'den White/Black taglarını say
+      // 2) Oyun sayısı — /games stream olarak oku, geldikçe parse et
       setLoading('Oyun verileri çekiliyor...');
-      const gRes = await fetch(`https://lichess.org/api/swiss/${id}/games?moves=false`);
+      const gRes = await fetch(`https://lichess.org/api/swiss/${id}/games?moves=false&clocks=false&evals=false&opening=false`);
       if (gRes.ok) {
-        const pgn = await gRes.text();
-        const whiteMatches = pgn.matchAll(/\[White "([^"]+)"\]/g);
-        const blackMatches = pgn.matchAll(/\[Black "([^"]+)"\]/g);
-        for (const m of whiteMatches) {
-          const key = m[1].toLowerCase();
-          if (playerMap[key]) playerMap[key]._g++;
+        const reader = gRes.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        let gameCount = 0;
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          // White/Black taglarını buldukça say, işlenenleri buffer'dan temizle
+          const lines = buffer.split('\n');
+          buffer = lines.pop(); // son yarım satırı sakla
+          for (const line of lines) {
+            if (line.startsWith('[White "')) {
+              const key = line.slice(8, -2).toLowerCase();
+              if (playerMap[key]) playerMap[key]._g++;
+            } else if (line.startsWith('[Black "')) {
+              const key = line.slice(8, -2).toLowerCase();
+              if (playerMap[key]) { playerMap[key]._g++; gameCount++; }
+              if (gameCount % 50 === 0) setLoading(`${gameCount} oyun işlendi...`);
+            }
+          }
         }
-        for (const m of blackMatches) {
-          const key = m[1].toLowerCase();
+        // buffer'da kalan son satır
+        if (buffer.startsWith('[White "')) {
+          const key = buffer.slice(8, -2).toLowerCase();
+          if (playerMap[key]) playerMap[key]._g++;
+        } else if (buffer.startsWith('[Black "')) {
+          const key = buffer.slice(8, -2).toLowerCase();
           if (playerMap[key]) playerMap[key]._g++;
         }
       }
@@ -398,6 +418,8 @@ async function loadData() {
     setTab('all');
     $('searchInput').value = '';
     resetRaffle();
+    const _elapsed = ((performance.now() - _t0) / 1000).toFixed(1);
+    $('tourMeta').textContent += ` · ⏱ ${_elapsed}s`;
     renderList();
 
   } catch (e) {
@@ -510,7 +532,7 @@ function copyRaffle() {
 }
 </script>
 <div style="text-align:center; padding: 24px 0 8px; font-family:'IBM Plex Mono',monospace; font-size:11px; color:#444;">
-  son güncelleme: <span style="color:#666;">17.05.2026 01:30 UTC</span> &nbsp;·&nbsp; build <span style="color:#c8b560;">v1.0.7</span>
+  son güncelleme: <span style="color:#666;">17.05.2026 01:30 UTC</span> &nbsp;·&nbsp; build <span style="color:#c8b560;">v1.0.9</span>
 </div>
 </body>
 </html>
