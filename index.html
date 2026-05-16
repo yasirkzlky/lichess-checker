@@ -139,6 +139,14 @@
     <div class="tab-bar">
       <button class="tab-btn active" id="tab-all" onclick="setTab('all')">Tüm Oyuncular</button>
       <button class="tab-btn" id="tab-completed" onclick="setTab('completed')">Tüm Turları Oynayanlar</button>
+      <button class="tab-btn" id="tab-custom" onclick="setTab('custom')">
+        En Az
+        <input type="number" id="customMin" value="5" min="1" max="99"
+          style="width:38px;padding:1px 4px;font-size:12px;font-family:inherit;background:var(--bg);border:1px solid var(--border2);border-radius:4px;color:var(--text);text-align:center;margin:0 3px;"
+          onclick="event.stopPropagation()"
+          oninput="if(currentFilter==='custom') renderList()" />
+        Oyun
+      </button>
       <div style="flex:1"></div>
       <div class="search-wrap">
         <input type="text" id="searchInput" placeholder="Oyuncu ara..." oninput="renderList()" />
@@ -189,6 +197,7 @@ function setTab(t) {
   document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
   const el = document.getElementById('tab-' + t);
   if (el) el.classList.add('active');
+  if (t === 'custom') setTimeout(() => $('customMin').focus(), 50);
   renderList();
 }
 function setFilter(f) { setTab(f); }
@@ -197,6 +206,10 @@ function renderList() {
   const data = allPlayers.filter(p => {
     if (q && !p._n.toLowerCase().includes(q)) return false;
     if (currentFilter === 'completed') return pStatus(p) === 'done';
+    if (currentFilter === 'custom') {
+      const min = parseInt($('customMin')?.value) || 1;
+      return (p._g ?? 0) >= min;
+    }
     return true;
   });
   if (!data.length) { $('listBody').innerHTML = '<div class="empty">Oyuncu bulunamadı.</div>'; return; }
@@ -353,6 +366,10 @@ function copyCompleted() {
   const data = allPlayers.filter(p => {
     if (q && !p._n.toLowerCase().includes(q)) return false;
     if (currentFilter === 'completed') return pStatus(p) === 'done';
+    if (currentFilter === 'custom') {
+      const min = parseInt($('customMin')?.value) || 1;
+      return (p._g ?? 0) >= min;
+    }
     return true;
   });
   const names = data.map(p => p._n).join('\n');
@@ -368,7 +385,7 @@ function copyCompleted() {
 $('url').addEventListener('keydown', e => { if (e.key === 'Enter') loadData(); });
 </script>
 <div style="text-align:center; padding: 24px 0 8px; font-family:'IBM Plex Mono',monospace; font-size:11px; color:#444;">
-  son güncelleme: <span style="color:#666;">17.05.2026 01:30 UTC</span> &nbsp;·&nbsp; build <span style="color:#c8b560;">v6</span>
+  son güncelleme: <span style="color:#666;">17.05.2026 01:30 UTC</span> &nbsp;·&nbsp; build <span style="color:#c8b560;">v7</span>
 </div>
 </body>
 </html>
