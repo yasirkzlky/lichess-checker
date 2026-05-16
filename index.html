@@ -140,7 +140,8 @@
     <div class="toolbar">
       <button class="filter-btn active" onclick="setFilter('all')">Tümü</button>
       <button class="filter-btn" onclick="setFilter('completed')">✓ Tamamladı</button>
-      <button class="filter-btn" onclick="setFilter('partial')">◑ Kısmi / Yok</button>
+      <button class="filter-btn" onclick="setFilter('partial')">◑ Kısmi</button>
+      <button class="filter-btn" onclick="setFilter('absent')">✗ Oynamadı</button>
       <div class="search-wrap">
         <input type="text" id="searchInput" placeholder="Oyuncu ara..." oninput="renderList()" />
       </div>
@@ -178,12 +179,17 @@ function parseNDJSON(t) {
 }
 function pStatus(p) {
   const g = p._g ?? 0;
-  return g >= maxR ? 'done' : g > 0 ? 'partial' : 'absent';
+  // done = tüm turları oynadı (kazandı/kaybetti/berabere farketmez)
+  // partial = bazı turları oynadı
+  // absent = hiç oynamadı
+  if (g >= maxR) return 'done';
+  if (g > 0) return 'partial';
+  return 'absent';
 }
 function setFilter(f) {
   currentFilter = f;
   document.querySelectorAll('.filter-btn').forEach((el, i) =>
-    el.classList.toggle('active', ['all','completed','partial'][i] === f)
+    el.classList.toggle('active', ['all','completed','partial','absent'][i] === f)
   );
   renderList();
 }
@@ -192,7 +198,8 @@ function renderList() {
   const data = allPlayers.filter(p => {
     if (q && !p._n.toLowerCase().includes(q)) return false;
     if (currentFilter === 'completed') return pStatus(p) === 'done';
-    if (currentFilter === 'partial') return pStatus(p) !== 'done';
+    if (currentFilter === 'partial') return pStatus(p) === 'partial';
+    if (currentFilter === 'absent') return pStatus(p) === 'absent';
     return true;
   });
   if (!data.length) { $('listBody').innerHTML = '<div class="empty">Oyuncu bulunamadı.</div>'; return; }
@@ -270,21 +277,37 @@ async function loadData() {
       const raw = parseNDJSON(text);
       if (!raw.length) throw new Error('Henüz sonuç yok. Turnuva başlamamış olabilir.');
 
-      allPlayers = raw.map(p => ({
-        _n: p.username || p.name || '?',
-        _r: p.rating || '',
-        _s: p.points ?? p.score ?? 0,
-        _g: p.nbGames ?? p.nb?.game ?? 0,
-      }));
+      // sheet.scores: her tur için 'w','d','l' (oynandı) ya da 'b','a','z' (oynamadı/bye)
+      function countPlayed(p) {
+        const sc = p.sheet?.scores;
+        if (!sc) return null;
+        // scores bir array of objects: [{o:'w'}, {o:'l'}...] ya da string array ya da string
+        if (Array.isArray(sc)) {
+          return sc.filter(s => {
+            const c = (typeof s === 'object' ? (s.o ?? s.r ?? '') : String(s)).toLowerCase();
+            return c === 'w' || c === 'd' || c === 'l';
+          }).length;
+        }
+        if (typeof sc === 'string') {
+          return (sc.match(/[wdlWDL]/g) || []).length;
+        }
+        return null;
+      }
+
+      allPlayers = raw.map(p => {
+        const played = countPlayed(p);
+        return {
+          _n: p.username || p.name || '?',
+          _r: p.rating || '',
+          _s: p.points ?? p.score ?? 0,
+          _g: played ?? p.nbGames ?? p.nb?.game ?? 0,
+        };
+      });
 
       const hasGameData = allPlayers.some(p => p._g > 0);
       if (!hasGameData) {
-        $('noteBox').textContent = '⚠ API oyun sayısı döndürmedi. Puan × 2 ile tahmin yapıldı (kazanılan her oyun = 1 puan varsayımı).';
+        $('noteBox').textContent = '⚠ API oyun sayısı döndürmedi. Turnuva bitmemişse sonuçlar eksik olabilir.';
         $('noteBox').style.display = 'block';
-        allPlayers = allPlayers.map(p => ({
-          ...p,
-          _g: p._s >= maxR ? maxR : p._s > 0 ? Math.min(Math.round(p._s * 2), maxR - 1) : 0,
-        }));
       }
 
     } else {
