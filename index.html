@@ -1,0 +1,346 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lichess Turnuva Checker</title>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0e0e0e; --surface: #181818; --surface2: #222;
+      --border: #2a2a2a; --border2: #383838;
+      --text: #f0f0e8; --muted: #888;
+      --accent: #c8b560; --accent2: #e8d080;
+      --green: #5cba7d; --red: #d96060; --amber: #d4a830;
+      --r: 8px;
+    }
+    body { font-family: 'IBM Plex Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; padding: 32px 16px; }
+    .page { max-width: 860px; margin: 0 auto; }
+
+    header { display: flex; align-items: center; gap: 14px; margin-bottom: 32px; }
+    .logo-box { width: 40px; height: 40px; background: var(--accent); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; }
+    .logo-title { font-family: 'IBM Plex Mono', monospace; font-size: 18px; font-weight: 600; color: var(--text); }
+    .logo-title span { color: var(--accent); }
+    .logo-sub { font-size: 12px; color: var(--muted); font-family: 'IBM Plex Mono', monospace; margin-top: 2px; }
+
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 20px; margin-bottom: 20px; }
+
+    label { display: block; font-size: 11px; font-family: 'IBM Plex Mono', monospace; color: var(--muted); letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 6px; }
+    input[type=text], input[type=number] {
+      width: 100%; background: var(--bg); border: 1px solid var(--border2); border-radius: var(--r);
+      color: var(--text); font-family: 'IBM Plex Mono', monospace; font-size: 13px;
+      padding: 10px 14px; outline: none; transition: border-color 0.15s;
+    }
+    input:focus { border-color: var(--accent); }
+    input::placeholder { color: #444; }
+
+    .input-row { display: grid; grid-template-columns: 1fr auto; gap: 10px; margin-top: 14px; align-items: end; }
+    .rounds-wrap { display: flex; flex-direction: column; }
+    .rounds-wrap input { width: 100%; }
+
+    #btn {
+      padding: 10px 22px; background: var(--accent); color: #0e0e0e;
+      border: none; border-radius: var(--r); font-family: 'IBM Plex Mono', monospace;
+      font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap;
+      transition: background 0.15s, opacity 0.15s;
+    }
+    #btn:hover { background: var(--accent2); }
+    #btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 18px; }
+    .stat { background: var(--surface2); border-radius: var(--r); padding: 14px 16px; }
+    .stat-label { font-size: 10px; font-family: 'IBM Plex Mono', monospace; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+    .stat-value { font-size: 22px; font-family: 'IBM Plex Mono', monospace; font-weight: 600; }
+    .col-green { color: var(--green); }
+    .col-amber { color: var(--amber); }
+
+    .tour-title { font-size: 15px; font-weight: 600; color: var(--accent); font-family: 'IBM Plex Mono', monospace; margin-bottom: 3px; }
+    .tour-meta { font-size: 12px; color: var(--muted); font-family: 'IBM Plex Mono', monospace; margin-bottom: 18px; }
+
+    .progress-bar { width: 100%; height: 3px; background: var(--border); border-radius: 2px; margin-bottom: 18px; overflow: hidden; }
+    .progress-fill { height: 100%; background: var(--green); border-radius: 2px; transition: width 0.6s ease; }
+
+    .toolbar { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; align-items: center; }
+    .filter-btn { padding: 6px 14px; font-size: 12px; font-family: 'IBM Plex Mono', monospace; border-radius: 20px; border: 1px solid var(--border2); background: transparent; color: var(--muted); cursor: pointer; transition: all 0.15s; }
+    .filter-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .filter-btn.active { background: var(--accent); border-color: var(--accent); color: #0e0e0e; }
+    .search-wrap { flex: 1; min-width: 160px; }
+    .search-wrap input { padding: 6px 12px; font-size: 12px; }
+    .copy-btn { padding: 6px 14px; font-size: 12px; font-family: 'IBM Plex Mono', monospace; border: 1px solid var(--border2); background: transparent; color: var(--muted); border-radius: var(--r); cursor: pointer; transition: all 0.15s; }
+    .copy-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+    .player-list { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+    .list-header { display: grid; grid-template-columns: 40px 1fr 80px 70px 100px; padding: 10px 16px; border-bottom: 1px solid var(--border); font-size: 10px; font-family: 'IBM Plex Mono', monospace; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+    .player-row { display: grid; grid-template-columns: 40px 1fr 80px 70px 100px; padding: 10px 16px; border-bottom: 1px solid var(--border); font-size: 13px; align-items: center; transition: background 0.1s; }
+    .player-row:last-child { border-bottom: none; }
+    .player-row:hover { background: var(--surface2); }
+    .rank { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--muted); }
+    .pname a { color: var(--text); text-decoration: none; font-weight: 500; }
+    .pname a:hover { color: var(--accent); }
+    .rating { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--muted); }
+    .score { font-family: 'IBM Plex Mono', monospace; font-weight: 600; text-align: right; }
+    .badge { display: inline-block; font-size: 10px; font-family: 'IBM Plex Mono', monospace; padding: 3px 8px; border-radius: 4px; font-weight: 600; }
+    .badge-done { background: rgba(92,186,125,0.15); color: var(--green); }
+    .badge-partial { background: rgba(212,168,48,0.15); color: var(--amber); }
+    .badge-absent { background: rgba(217,96,96,0.1); color: var(--red); }
+
+    .note { font-size: 12px; color: var(--muted); font-family: 'IBM Plex Mono', monospace; padding: 10px 14px; background: var(--surface2); border-left: 2px solid var(--accent); margin-bottom: 16px; }
+    .error-box { padding: 14px 16px; background: rgba(217,96,96,0.07); border: 1px solid rgba(217,96,96,0.2); border-radius: var(--r); color: var(--red); font-family: 'IBM Plex Mono', monospace; font-size: 13px; white-space: pre-line; }
+    .loading-row { display: flex; align-items: center; gap: 10px; padding: 28px 16px; color: var(--muted); font-size: 13px; font-family: 'IBM Plex Mono', monospace; }
+    .spinner { width: 16px; height: 16px; border: 2px solid var(--border2); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; flex-shrink: 0; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .empty { padding: 32px; text-align: center; color: var(--muted); font-size: 13px; font-family: 'IBM Plex Mono', monospace; }
+    #results { display: none; }
+
+    @media (max-width: 580px) {
+      .list-header, .player-row { grid-template-columns: 32px 1fr 60px 90px; }
+      .rating { display: none; }
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <header>
+    <div class="logo-box">♟</div>
+    <div>
+      <div class="logo-title">lichess <span>checker</span></div>
+      <div class="logo-sub">turnuva tamamlama analizi</div>
+    </div>
+  </header>
+
+  <div class="card">
+    <label>Turnuva Linki</label>
+    <input type="text" id="url" placeholder="https://lichess.org/swiss/xxxx  veya  /tournament/xxxx" />
+    <div class="input-row">
+      <div class="rounds-wrap">
+        <label style="margin-top:12px;">Swiss Round Sayısı <span style="color:#555;font-size:10px;">(API'den otomatik alınır, yoksa bu kullanılır)</span></label>
+        <input type="number" id="rounds" value="9" min="1" max="30" style="width:120px;" />
+      </div>
+      <button id="btn" onclick="loadData()">▶ Kontrol Et</button>
+    </div>
+  </div>
+
+  <div id="results">
+    <div class="tour-title" id="tourTitle"></div>
+    <div class="tour-meta" id="tourMeta"></div>
+
+    <div class="stats-grid">
+      <div class="stat"><div class="stat-label">Toplam</div><div class="stat-value" id="sTotal">—</div></div>
+      <div class="stat"><div class="stat-label">Tamamladı</div><div class="stat-value col-green" id="sDone">—</div></div>
+      <div class="stat"><div class="stat-label">Kısmi</div><div class="stat-value col-amber" id="sPartial">—</div></div>
+      <div class="stat"><div class="stat-label">Oran</div><div class="stat-value" id="sRate">—</div></div>
+    </div>
+
+    <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+
+    <div id="noteBox" class="note" style="display:none;"></div>
+
+    <div class="toolbar">
+      <button class="filter-btn active" onclick="setFilter('all')">Tümü</button>
+      <button class="filter-btn" onclick="setFilter('completed')">✓ Tamamladı</button>
+      <button class="filter-btn" onclick="setFilter('partial')">◑ Kısmi / Yok</button>
+      <div class="search-wrap">
+        <input type="text" id="searchInput" placeholder="Oyuncu ara..." oninput="renderList()" />
+      </div>
+      <button class="copy-btn" onclick="copyCompleted()">⊕ Tamamlayanları Kopyala</button>
+    </div>
+
+    <div class="player-list">
+      <div class="list-header">
+        <div>#</div><div>Oyuncu</div><div>Rating</div><div style="text-align:right">Puan</div><div style="text-align:right">Durum</div>
+      </div>
+      <div id="listBody"></div>
+    </div>
+  </div>
+
+</div>
+<script>
+let allPlayers = [], currentFilter = 'all', maxR = 9;
+
+const $ = id => document.getElementById(id);
+
+function detectType(s) {
+  if (s.includes('/swiss/')) return 'swiss';
+  if (s.includes('/tournament/')) return 'arena';
+  return 'unknown';
+}
+function extractId(s) {
+  s = s.trim().replace(/\/$/, '');
+  try { return new URL(s).pathname.split('/').filter(Boolean).pop(); }
+  catch { return s.split('/').filter(Boolean).pop() || s; }
+}
+function parseNDJSON(t) {
+  return t.trim().split('\n').filter(l => l.trim()).map(l => {
+    try { return JSON.parse(l); } catch { return null; }
+  }).filter(Boolean);
+}
+function pStatus(p) {
+  const g = p._g ?? 0;
+  return g >= maxR ? 'done' : g > 0 ? 'partial' : 'absent';
+}
+function setFilter(f) {
+  currentFilter = f;
+  document.querySelectorAll('.filter-btn').forEach((el, i) =>
+    el.classList.toggle('active', ['all','completed','partial'][i] === f)
+  );
+  renderList();
+}
+function renderList() {
+  const q = ($('searchInput').value || '').toLowerCase();
+  const data = allPlayers.filter(p => {
+    if (q && !p._n.toLowerCase().includes(q)) return false;
+    if (currentFilter === 'completed') return pStatus(p) === 'done';
+    if (currentFilter === 'partial') return pStatus(p) !== 'done';
+    return true;
+  });
+  if (!data.length) { $('listBody').innerHTML = '<div class="empty">Oyuncu bulunamadı.</div>'; return; }
+  $('listBody').innerHTML = data.map((p, i) => {
+    const s = pStatus(p);
+    const bc = s === 'done' ? 'badge-done' : s === 'partial' ? 'badge-partial' : 'badge-absent';
+    const bt = s === 'done' ? 'DONE' : s === 'partial' ? `${p._g}/${maxR}` : 'YOK';
+    return `<div class="player-row">
+      <div class="rank">${i+1}</div>
+      <div class="pname"><a href="https://lichess.org/@/${p._n}" target="_blank">${p._n}</a></div>
+      <div class="rating">${p._r}</div>
+      <div class="score">${p._s}</div>
+      <div style="text-align:right"><span class="badge ${bc}">${bt}</span></div>
+    </div>`;
+  }).join('');
+}
+function updateStats() {
+  const done = allPlayers.filter(p => pStatus(p) === 'done').length;
+  const partial = allPlayers.filter(p => pStatus(p) === 'partial').length;
+  const total = allPlayers.length;
+  const rate = total ? Math.round(done / total * 100) : 0;
+  $('sTotal').textContent = total;
+  $('sDone').textContent = done;
+  $('sPartial').textContent = partial;
+  $('sRate').textContent = rate + '%';
+  $('progressFill').style.width = rate + '%';
+}
+function setLoading(msg) {
+  $('listBody').innerHTML = `<div class="loading-row"><div class="spinner"></div>${msg}</div>`;
+}
+function showError(msg) {
+  $('tourTitle').textContent = 'Hata';
+  $('tourMeta').textContent = '';
+  $('listBody').innerHTML = `<div class="error-box">❌ ${msg}</div>`;
+}
+
+async function loadData() {
+  const urlVal = $('url').value.trim();
+  if (!urlVal) { $('url').focus(); return; }
+
+  const btn = $('btn');
+  btn.disabled = true;
+  allPlayers = [];
+  $('results').style.display = 'block';
+  $('noteBox').style.display = 'none';
+  $('tourTitle').textContent = 'Yükleniyor...';
+  $('tourMeta').textContent = '';
+  setLoading('Lichess API\'ye bağlanılıyor...');
+
+  const type = detectType(urlVal);
+  const id = extractId(urlVal);
+
+  if (type === 'unknown') {
+    showError('Link türü algılanamadı.\nURL\'de "/swiss/" veya "/tournament/" geçmeli.\nÖrnek: https://lichess.org/swiss/D92LT3Oe');
+    btn.disabled = false;
+    return;
+  }
+
+  try {
+    if (type === 'swiss') {
+      setLoading('Swiss turnuva bilgileri alınıyor...');
+      const infoRes = await fetch(`https://lichess.org/api/swiss/${id}`);
+      if (!infoRes.ok) throw new Error(`Turnuva bulunamadı (HTTP ${infoRes.status})\nID: ${id}`);
+      const info = await infoRes.json();
+
+      maxR = info.nbRounds || parseInt($('rounds').value) || 9;
+      const curRound = info.round || '?';
+      $('tourTitle').textContent = info.name || 'Swiss Turnuvası';
+      $('tourMeta').textContent = `Swiss · ${maxR} tur · Mevcut tur: ${curRound} · ${info.nbPlayers ?? '?'} oyuncu`;
+
+      setLoading(`Oyuncu sonuçları çekiliyor...`);
+      const res = await fetch(`https://lichess.org/api/swiss/${id}/results?nb=9999`);
+      if (!res.ok) throw new Error(`Sonuçlar alınamadı (HTTP ${res.status})`);
+      const text = await res.text();
+      const raw = parseNDJSON(text);
+      if (!raw.length) throw new Error('Henüz sonuç yok. Turnuva başlamamış olabilir.');
+
+      allPlayers = raw.map(p => ({
+        _n: p.username || p.name || '?',
+        _r: p.rating || '',
+        _s: p.points ?? p.score ?? 0,
+        _g: p.nbGames ?? p.nb?.game ?? 0,
+      }));
+
+      const hasGameData = allPlayers.some(p => p._g > 0);
+      if (!hasGameData) {
+        $('noteBox').textContent = '⚠ API oyun sayısı döndürmedi. Puan × 2 ile tahmin yapıldı (kazanılan her oyun = 1 puan varsayımı).';
+        $('noteBox').style.display = 'block';
+        allPlayers = allPlayers.map(p => ({
+          ...p,
+          _g: p._s >= maxR ? maxR : p._s > 0 ? Math.min(Math.round(p._s * 2), maxR - 1) : 0,
+        }));
+      }
+
+    } else {
+      setLoading('Arena turnuva bilgileri alınıyor...');
+      const infoRes = await fetch(`https://lichess.org/api/tournament/${id}`);
+      if (!infoRes.ok) throw new Error(`Turnuva bulunamadı (HTTP ${infoRes.status})\nID: ${id}`);
+      const info = await infoRes.json();
+      $('tourTitle').textContent = info.fullName || info.name || 'Arena Turnuvası';
+
+      setLoading('Tüm sayfalar çekiliyor...');
+      let page = 1, hasMore = true;
+      while (hasMore && page <= 30) {
+        const r = await fetch(`https://lichess.org/api/tournament/${id}?page=${page}`);
+        if (!r.ok) break;
+        const d = await r.json();
+        const players = d.standing?.players || [];
+        if (!players.length) break;
+        allPlayers.push(...players.map(p => ({
+          _n: p.name || p.username || '?',
+          _r: p.rating || '',
+          _s: p.score ?? 0,
+          _g: p.nb?.game || 0,
+        })));
+        hasMore = players.length >= 10;
+        page++;
+      }
+      if (!allPlayers.length) throw new Error('Henüz oyuncu yok.');
+      maxR = Math.max(...allPlayers.map(p => p._g), 1);
+      const typeLabel = info.variant?.key?.toUpperCase() || 'Arena';
+      $('tourMeta').textContent = `${typeLabel} · ${allPlayers.length} oyuncu · Maks oyun: ${maxR}`;
+    }
+
+    updateStats();
+    currentFilter = 'all';
+    document.querySelectorAll('.filter-btn').forEach((el, i) => el.classList.toggle('active', i === 0));
+    $('searchInput').value = '';
+    renderList();
+
+  } catch (e) {
+    showError(e.message);
+  }
+  btn.disabled = false;
+}
+
+function copyCompleted() {
+  const names = allPlayers.filter(p => pStatus(p) === 'done').map(p => p._n).join('\n');
+  if (!names) { alert('Tamamlayan oyuncu yok.'); return; }
+  navigator.clipboard.writeText(names).then(() => {
+    const b = document.querySelector('.copy-btn');
+    const old = b.textContent;
+    b.textContent = '✓ Kopyalandı!';
+    setTimeout(() => b.textContent = old, 2000);
+  });
+}
+
+$('url').addEventListener('keydown', e => { if (e.key === 'Enter') loadData(); });
+</script>
+</body>
+</html>
