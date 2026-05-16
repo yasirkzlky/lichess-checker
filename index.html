@@ -445,6 +445,9 @@ function getActivePool() {
 }
 
 function updateRaffleInfo() {
+  const btn = $('raffle-btn');
+  const info = $('raffle-pool-info');
+  if (!btn || !info) return;
   const pool = getActivePool();
   const total = allPlayers.filter(p => {
     if (currentFilter === 'completed') return pStatus(p) === 'done';
@@ -454,8 +457,8 @@ function updateRaffleInfo() {
     }
     return true;
   }).length;
-  $('raffle-pool-info').textContent = `${pool.length} / ${total} oyuncu havuzda`;
-  $('raffle-btn').disabled = pool.length === 0;
+  info.textContent = `${pool.length} / ${total} oyuncu havuzda`;
+  btn.disabled = pool.length === 0;
 }
 
 function drawRaffle() {
@@ -494,7 +497,7 @@ function resetRaffle() {
 }
 </script>
 <div style="text-align:center; padding: 24px 0 8px; font-family:'IBM Plex Mono',monospace; font-size:11px; color:#444;">
-  son güncelleme: <span style="color:#666;">17.05.2026 01:30 UTC</span> &nbsp;·&nbsp; build <span style="color:#c8b560;">v1</span>
+  son güncelleme: <span style="color:#666;">17.05.2026 01:30 UTC</span> &nbsp;·&nbsp; build <span style="color:#c8b560;">v10</span>
 </div>
 </body>
 </html>
