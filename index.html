@@ -188,6 +188,7 @@
         <div class="raffle-history-label" id="raffle-history-label" style="display:none;">Çekilen oyuncular</div>
         <div id="raffle-history"></div>
         <button class="raffle-reset" id="raffle-reset" onclick="resetRaffle()" style="display:none;">↺ Sıfırla</button>
+        <button class="raffle-reset" id="raffle-copy" onclick="copyRaffle()" style="display:none; margin-top:6px;">⊕ Çekilenleri Kopyala</button>
       </div>
 
     </div>
@@ -484,6 +485,7 @@ function drawRaffle() {
 
   $('raffle-history-label').style.display = 'block';
   $('raffle-reset').style.display = 'block';
+  $('raffle-copy').style.display = 'block';
   updateRaffleInfo();
 }
 
@@ -493,11 +495,22 @@ function resetRaffle() {
   $('raffle-history').innerHTML = '';
   $('raffle-history-label').style.display = 'none';
   $('raffle-reset').style.display = 'none';
+  $('raffle-copy').style.display = 'none';
   updateRaffleInfo();
+}
+function copyRaffle() {
+  const names = [...raffleDrawn].join('\n');
+  if (!names) return;
+  navigator.clipboard.writeText(names).then(() => {
+    const b = $('raffle-copy');
+    const prev = b.textContent;
+    b.textContent = '✓ Kopyalandı!';
+    setTimeout(() => b.textContent = prev, 2000);
+  });
 }
 </script>
 <div style="text-align:center; padding: 24px 0 8px; font-family:'IBM Plex Mono',monospace; font-size:11px; color:#444;">
-  son güncelleme: <span style="color:#666;">17.05.2026 01:30 UTC</span> &nbsp;·&nbsp; build <span style="color:#c8b560;">v10</span>
+  son güncelleme: <span style="color:#666;">17.05.2026 01:30 UTC</span> &nbsp;·&nbsp; build <span style="color:#c8b560;">v1.0.7</span>
 </div>
 </body>
 </html>
