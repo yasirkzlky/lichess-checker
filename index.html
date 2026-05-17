@@ -234,7 +234,6 @@
       <div class="raffle-box">
         <div class="raffle-title">Çekiliş</div>
         <div class="raffle-sub" id="raffle-pool-info">Aktif sekmeden çekilir</div>
-        <div style="font-size:10px; color:var(--muted); font-family:'IBM Plex Mono',monospace; margin-top:-10px; margin-bottom:14px;" id="raffle-search-note" style="display:none;">⚠ Arama havuzu etkilemez</div>
         <button class="raffle-btn" onclick="drawRaffle()">🎲 Çek</button>
         <div id="raffle-latest" class="raffle-latest" style="display:none;"></div>
         <div class="raffle-history-label" id="raffle-history-label" style="display:none;">Çekilen oyuncular</div>
@@ -366,8 +365,6 @@ function onSearch() {
   currentPage = 0;
   showAll = false;
   renderList();
-  const note = $('raffle-search-note');
-  if (note) note.style.display = ($('searchInput').value || '').trim() ? 'block' : 'none';
   updateRaffleInfo();
 }
 function updateStats() {
@@ -607,7 +604,8 @@ function updateRaffleInfo() {
     return true;
   }).length;
   info.textContent = `${pool.length} / ${total} oyuncu havuzda`;
-  btn.textContent = pool.length > 0 ? `🎲 ${pool.length}/${total} kişi içinde çek` : '🎲 Havuz boş';
+  const drawn = raffleDrawn.size;
+  btn.textContent = pool.length > 0 ? `🎲 Çek (${drawn}/${total})` : `🎲 Havuz boş (${drawn}/${total})`;
   btn.disabled = pool.length === 0;
 }
 
@@ -727,7 +725,7 @@ function copyRaffle() {
 }
 </script>
 <div style="text-align:center; padding: 24px 0 8px; font-family:'IBM Plex Mono',monospace; font-size:11px; color:#444;">
-  son güncelleme: <span style="color:#666;">17.05.2026 02:30 UTC</span> &nbsp;·&nbsp; build <span style="color:#c8b560;">v1.0.17</span>
+  son güncelleme: <span style="color:#666;">17.05.2026 02:30 UTC</span> &nbsp;·&nbsp; build <span style="color:#c8b560;">v1.0.18</span>
 </div>
 </body>
 </html>
