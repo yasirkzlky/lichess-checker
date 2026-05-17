@@ -53,8 +53,7 @@
     .tour-title { font-size: 15px; font-weight: 600; color: var(--accent); font-family: 'IBM Plex Mono', monospace; margin-bottom: 3px; }
     .tour-meta { font-size: 12px; color: var(--muted); font-family: 'IBM Plex Mono', monospace; margin-bottom: 18px; }
 
-    .progress-bar { width: 100%; height: 3px; background: var(--border); border-radius: 2px; margin-bottom: 18px; overflow: hidden; }
-    .progress-fill { height: 100%; background: var(--green); border-radius: 2px; transition: width 0.6s ease; }
+
 
     .toolbar { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; align-items: center; }
     .filter-btn { padding: 6px 14px; font-size: 12px; font-family: 'IBM Plex Mono', monospace; border-radius: 20px; border: 1px solid var(--border2); background: transparent; color: var(--muted); cursor: pointer; transition: all 0.15s; }
@@ -173,8 +172,6 @@
 
     <div id="noteBox" class="note" style="display:none;"></div>
 
-    <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
-
     <div class="main-layout">
 
       <div class="list-col">
@@ -221,8 +218,6 @@
           </div>
           <div id="listBody"></div>
         </div>
-      </div>
-
       </div>
 
       <div class="raffle-box">
@@ -369,7 +364,6 @@ function updateStats() {
   const lastround = allPlayers.filter(p => p._lastRound === true).length;
   const cntLR = $('cnt-lastround');
   if (cntLR) cntLR.textContent = lastround;
-  $('progressFill').style.width = rate + '%';
   updateCustomCount();
 }
 function updateCustomCount() {
@@ -648,7 +642,7 @@ function copyRaffle() {
 }
 </script>
 <div style="text-align:center; padding: 24px 0 8px; font-family:'IBM Plex Mono',monospace; font-size:11px; color:#444;">
-  Son güncelleme: <span style="color:#666;">17.05.2026 01:55 UTC</span> &nbsp;·&nbsp; build <span style="color:#c8b560;">v1.0.15</span>
+  Son güncelleme: <span style="color:#666;">17.05.2026 01:30 UTC</span> &nbsp;·&nbsp; build <span style="color:#c8b560;">v1.0.15</span>
 </div>
 </body>
 </html>
