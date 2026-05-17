@@ -53,8 +53,6 @@
     .tour-title { font-size: 15px; font-weight: 600; color: var(--accent); font-family: 'IBM Plex Mono', monospace; margin-bottom: 3px; }
     .tour-meta { font-size: 12px; color: var(--muted); font-family: 'IBM Plex Mono', monospace; margin-bottom: 18px; }
 
-
-
     .toolbar { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; align-items: center; }
     .filter-btn { padding: 6px 14px; font-size: 12px; font-family: 'IBM Plex Mono', monospace; border-radius: 20px; border: 1px solid var(--border2); background: transparent; color: var(--muted); cursor: pointer; transition: all 0.15s; }
     .filter-btn:hover { border-color: var(--accent); color: var(--accent); }
@@ -97,7 +95,6 @@
     .list-col { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
     .list-toolbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
     .empty { padding: 32px; text-align: center; color: var(--muted); font-size: 13px; font-family: 'IBM Plex Mono', monospace; }
-    .pagination { display: flex; align-items: center; gap: 4px; padding: 10px 14px; border-top: 1px solid var(--border); flex-wrap: wrap; }
     .pg-btn { padding: 5px 10px; font-size: 12px; font-family: 'IBM Plex Mono', monospace; border: 1px solid var(--border2); background: transparent; color: var(--muted); border-radius: var(--r); cursor: pointer; transition: all 0.15s; min-width: 32px; }
     .pg-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
     .pg-btn:disabled { opacity: 0.3; cursor: not-allowed; }
@@ -112,8 +109,10 @@
     .raffle-btn:hover { background: var(--accent2); }
     .raffle-btn:disabled { opacity: 0.4; cursor: not-allowed; }
     .raffle-latest { margin-top: 14px; padding: 12px; background: rgba(200,181,96,0.1); border: 1px solid rgba(200,181,96,0.3); border-radius: var(--r); text-align: center; }
-    .raffle-latest-name { font-family: 'IBM Plex Mono', monospace; font-size: 15px; font-weight: 600; color: var(--accent); }
+    .raffle-latest-name { font-family: 'IBM Plex Mono', monospace; font-size: 15px; font-weight: 600; color: var(--accent); margin-bottom: 6px; }
     .raffle-latest-sub { font-size: 11px; color: var(--muted); font-family: 'IBM Plex Mono', monospace; margin-top: 3px; }
+    .raffle-msg-btn { display: inline-block; margin-top: 8px; padding: 5px 14px; font-size: 11px; font-family: 'IBM Plex Mono', monospace; border: 1px solid rgba(200,181,96,0.5); border-radius: var(--r); color: var(--accent); background: transparent; cursor: pointer; text-decoration: none; transition: all 0.15s; }
+    .raffle-msg-btn:hover { background: rgba(200,181,96,0.15); }
     .raffle-history-label { font-size: 10px; font-family: 'IBM Plex Mono', monospace; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin: 14px 0 6px; }
     .raffle-entry { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 12px; font-family: 'IBM Plex Mono', monospace; }
     .raffle-entry:last-child { border-bottom: none; }
@@ -121,6 +120,8 @@
     .raffle-entry-name { color: var(--text); flex: 1; }
     .raffle-entry-name a { color: var(--text); text-decoration: none; }
     .raffle-entry-name a:hover { color: var(--accent); }
+    .raffle-entry-msg { font-size: 13px; color: var(--muted); text-decoration: none; transition: color 0.15s; }
+    .raffle-entry-msg:hover { color: var(--accent); }
     .raffle-reset { width: 100%; margin-top: 12px; padding: 7px; background: transparent; border: 1px solid var(--border2); border-radius: var(--r); font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: var(--muted); cursor: pointer; transition: all 0.15s; }
     .raffle-reset:hover { border-color: var(--red); color: var(--red); }
     .raffle-del { background: none; border: none; color: var(--border2); cursor: pointer; font-size: 14px; padding: 0 2px; line-height: 1; transition: color 0.15s; flex-shrink: 0; }
@@ -201,7 +202,7 @@
           </button>
           <div style="flex:1"></div>
         </div>
-        <div id="custom-panel" style="display:none; padding:12px 16px; background:var(--surface2); border-bottom:1px solid var(--border); display:none; align-items:center; gap:10px;">
+        <div id="custom-panel" style="display:none; padding:12px 16px; background:var(--surface2); border-bottom:1px solid var(--border); align-items:center; gap:10px;">
           <span style="font-size:13px; font-family:'IBM Plex Mono',monospace; color:var(--muted);">En az kaç oyun:</span>
           <input type="number" id="customMin" value="5" min="1" max="99"
             style="width:70px; font-family:'IBM Plex Mono',monospace; font-size:13px;"
@@ -370,7 +371,6 @@ function onSearch() {
 function updateStats() {
   const done = allPlayers.filter(p => pStatus(p) === 'done').length;
   const total = allPlayers.length;
-  const rate = total ? Math.round(done / total * 100) : 0;
   $('cnt-all').textContent = total;
   $('cnt-completed').textContent = done;
   const lastround = allPlayers.filter(p => p._lastRound === true).length;
@@ -429,7 +429,6 @@ async function loadData() {
       $('tourTitle').textContent = info.name || 'Swiss Turnuvası';
       $('tourMeta').textContent = `Swiss · ${maxR} tur · Mevcut tur: ${curRound} · ${info.nbPlayers ?? '?'} oyuncu`;
 
-      // AŞAMA 1: Oyuncu listesi hızlıca göster
       setLoading('Oyuncu listesi çekiliyor...');
       const res = await fetch(`https://lichess.org/api/swiss/${id}/results?nb=9999`);
       if (!res.ok) throw new Error(`Sonuçlar alınamadı (HTTP ${res.status})`);
@@ -445,7 +444,6 @@ async function loadData() {
         };
       });
 
-      // Aşama 1 bitti — listeyi hemen göster (_g=-1 = "yükleniyor")
       allPlayers = Object.values(playerMap);
       updateStats();
       setTab('all');
@@ -457,7 +455,6 @@ async function loadData() {
       $('noteBox').style.display = 'block';
       btn.disabled = false;
 
-      // AŞAMA 2: PGN stream arka planda — listeyi bloklamadan
       (async () => {
         const gRes = await fetch(`https://lichess.org/api/swiss/${id}/games?moves=false&clocks=false&evals=false&opening=false`);
         if (!gRes.ok) {
@@ -467,7 +464,7 @@ async function loadData() {
         const reader = gRes.body.getReader();
         const decoder = new TextDecoder();
         let buffer = '', gameCount = 0;
-        const gameOrder = []; // her oyunun white+black sırasıyla
+        const gameOrder = [];
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
@@ -491,14 +488,11 @@ async function loadData() {
             }
           }
         }
-        // Kalan buffer
         if (buffer.startsWith('[White "')) { const k=buffer.slice(8,-2).toLowerCase(); if(playerMap[k]) { if(playerMap[k]._g === -1) playerMap[k]._g = 1; else playerMap[k]._g++; } }
         else if (buffer.startsWith('[Black "')) { const k=buffer.slice(8,-2).toLowerCase(); if(playerMap[k]) { if(playerMap[k]._g === -1) playerMap[k]._g = 1; else playerMap[k]._g++; } }
 
-        // 0 oyun görünenleri düzelt (_g hala -1 ise hiç oynamamış)
         Object.values(playerMap).forEach(p => { if (p._g === -1) p._g = 0; });
 
-        // Son tur oynayanları belirle: son round'daki oyunlar = gameOrder'ın son (totalGames/maxR) kısmı
         const gamesPerRound = Math.round(gameCount / maxR);
         const lastRoundPlayers = new Set(gameOrder.slice(-gamesPerRound * 2));
         lastRoundPlayers.forEach(name => { if (playerMap[name]) playerMap[name]._lastRound = true; });
@@ -509,7 +503,6 @@ async function loadData() {
         updateRaffleInfo();
       })();
 
-      // Aşama 2 arka planda, ana akış burada biter
       return;
 
     } else {
@@ -575,7 +568,6 @@ $('url').addEventListener('keydown', e => { if (e.key === 'Enter') loadData(); }
 let raffleDrawn = new Set();
 
 function getActivePool() {
-  // Çekiliş aramadan bağımsız — sadece aktif tab filtresi
   return allPlayers.filter(p => {
     if (p._g === -1) return false;
     if (raffleDrawn.has(p._n)) return false;
@@ -595,6 +587,7 @@ function updateRaffleInfo() {
   if (!btn || !info) return;
   const pool = getActivePool();
   const total = allPlayers.filter(p => {
+    if (p._g === -1) return false;
     if (currentFilter === 'completed') return pStatus(p) === 'done';
     if (currentFilter === 'lastround') return p._lastRound === true;
     if (currentFilter === 'custom') {
@@ -615,26 +608,26 @@ function drawRaffle() {
   const winner = pool[Math.floor(Math.random() * pool.length)];
   raffleDrawn.add(winner._n);
 
-  // Animate latest box
   const latest = $('raffle-latest');
   latest.style.display = 'block';
   latest.classList.remove('popping');
   void latest.offsetWidth;
   latest.classList.add('popping');
-  latest.innerHTML = `<div class="raffle-latest-name">🎉 ${winner._n}</div>
+  latest.innerHTML = `
+    <div class="raffle-latest-name">🎉 ${winner._n}</div>
     <div class="raffle-latest-sub">${winner._r ? 'Rating: ' + winner._r + ' · ' : ''}Puan: ${winner._s}</div>`;
 
-  // Confetti burst
   launchConfetti();
 
-  // Add to history with delete button
   const history = $('raffle-history');
   const count = raffleDrawn.size;
   const entry = document.createElement('div');
   entry.className = 'raffle-entry';
   entry.dataset.name = winner._n;
-  entry.innerHTML = `<span class="raffle-entry-num">${count}.</span>
+  entry.innerHTML = `
+    <span class="raffle-entry-num">${count}.</span>
     <span class="raffle-entry-name"><a href="https://lichess.org/@/${winner._n}" target="_blank">${winner._n}</a></span>
+    <a class="raffle-entry-msg" href="https://lichess.org/inbox/${winner._n}" target="_blank" title="Mesaj gönder">✉</a>
     <button class="raffle-del" title="Sil" onclick="deleteRaffleEntry(this, '${winner._n}')">✕</button>`;
   history.insertBefore(entry, history.firstChild);
 
@@ -647,7 +640,6 @@ function drawRaffle() {
 function deleteRaffleEntry(btn, name) {
   raffleDrawn.delete(name);
   btn.closest('.raffle-entry').remove();
-  // Renumber remaining entries
   const entries = $('raffle-history').querySelectorAll('.raffle-entry');
   entries.forEach((el, i) => {
     el.querySelector('.raffle-entry-num').textContent = (entries.length - i) + '.';
@@ -672,9 +664,7 @@ function launchConfetti() {
     x: Math.random() * canvas.width,
     y: Math.random() * canvas.height * 0.4,
     r: Math.random() * 6 + 3,
-    d: Math.random() * 60 + 20,
     color: colors[Math.floor(Math.random() * colors.length)],
-    tilt: Math.random() * 10 - 10,
     tiltAngle: 0,
     tiltSpeed: Math.random() * 0.1 + 0.05,
     vy: Math.random() * 3 + 2,
@@ -690,11 +680,10 @@ function launchConfetti() {
       p.y += p.vy;
       p.x += p.vx;
       p.opacity -= 0.012;
-      p.tilt = Math.sin(p.tiltAngle) * 12;
       ctx.beginPath();
       ctx.globalAlpha = Math.max(0, p.opacity);
       ctx.fillStyle = p.color;
-      ctx.ellipse(p.x, p.y, p.r, p.r * 0.4, p.tilt, 0, Math.PI * 2);
+      ctx.ellipse(p.x, p.y, p.r, p.r * 0.4, Math.sin(p.tiltAngle) * 12, 0, Math.PI * 2);
       ctx.fill();
     });
     frame++;
@@ -713,6 +702,7 @@ function resetRaffle() {
   $('raffle-copy').style.display = 'none';
   updateRaffleInfo();
 }
+
 function copyRaffle() {
   const names = [...raffleDrawn].join('\n');
   if (!names) return;
@@ -725,7 +715,7 @@ function copyRaffle() {
 }
 </script>
 <div style="text-align:center; padding: 24px 0 8px; font-family:'IBM Plex Mono',monospace; font-size:11px; color:#444;">
-  Son güncelleme: <span style="color:#666;">17.05.2026 02:30 UTC</span> &nbsp;·&nbsp; build <span style="color:#c8b560;">v1.0.19</span>
+  Son güncelleme: <span style="color:#666;">17.05.2026 03:00 UTC</span> &nbsp;·&nbsp; build <span style="color:#c8b560;">v1.0.21</span>
 </div>
 </body>
 </html>
