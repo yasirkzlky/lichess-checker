@@ -65,10 +65,11 @@
     .copy-btn:hover { border-color: var(--accent); color: var(--accent); }
     .tab-bar { display: flex; gap: 0; margin-bottom: 0; flex-wrap: nowrap; overflow-x: auto; align-items: center; border-bottom: 1px solid var(--border); scrollbar-width: none; }
     .tab-bar::-webkit-scrollbar { display: none; }
-    .tab-btn { padding: 10px 20px; font-size: 13px; font-family: 'IBM Plex Mono', monospace; border: none; border-bottom: 2px solid transparent; background: transparent; color: var(--muted); cursor: pointer; transition: all 0.15s; margin-bottom: -1px; }
+    .tab-btn { padding: 10px 16px; font-size: 12px; font-family: 'IBM Plex Mono', monospace; border: none; border-bottom: 2px solid transparent; background: transparent; color: var(--muted); cursor: pointer; transition: all 0.15s; margin-bottom: -1px; display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center; }
+    .tab-label { font-size: 12px; line-height: 1.3; }
     .tab-btn:hover { color: var(--text); }
     .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
-    .tab-count { font-size: 11px; font-family: 'IBM Plex Mono', monospace; background: var(--surface2); border-radius: 10px; padding: 1px 7px; margin-left: 4px; color: var(--muted); }
+    .tab-count { font-size: 11px; font-family: 'IBM Plex Mono', monospace; background: var(--surface2); border-radius: 10px; padding: 1px 8px; margin-left: 0; color: var(--muted); display: block; }
     .tab-btn.active .tab-count { background: rgba(200,181,96,0.15); }
     .search-wrap { margin-left: 8px; }
 
@@ -159,8 +160,8 @@
   <header>
     <div class="logo-box">♟</div>
     <div>
-      <div class="logo-title">lichess <span>checker</span></div>
-      <div class="logo-sub">turnuva tamamlama analizi&çekiliş</div>
+      <div class="logo-title">Lichess <span>Checker</span></div>
+      <div class="logo-sub">Turnuva Tamamlama Analizi & Çekiliş</div>
     </div>
   </header>
 
@@ -183,16 +184,20 @@
       <div class="list-col">
         <div class="tab-bar">
           <button class="tab-btn active" id="tab-all" onclick="setTab('all')">
-            Tüm Oyuncular <span class="tab-count" id="cnt-all"></span>
+            <span class="tab-label">Tüm<br>Oyuncular</span>
+            <span class="tab-count" id="cnt-all"></span>
           </button>
           <button class="tab-btn" id="tab-completed" onclick="setTab('completed')">
-            Tüm Turları Oynayanlar <span class="tab-count col-green" id="cnt-completed"></span>
+            <span class="tab-label">Tüm Turları<br>Oynayanlar</span>
+            <span class="tab-count col-green" id="cnt-completed"></span>
           </button>
           <button class="tab-btn" id="tab-lastround" onclick="setTab('lastround')">
-            Son Turu Oynayanlar <span class="tab-count col-amber" id="cnt-lastround"></span>
+            <span class="tab-label">Son Turu<br>Oynayanlar</span>
+            <span class="tab-count col-amber" id="cnt-lastround"></span>
           </button>
           <button class="tab-btn" id="tab-custom" onclick="setTab('custom')">
-            En Az <span id="tab-custom-label">5</span> Oyun <span class="tab-count col-amber" id="cnt-custom"></span>
+            <span class="tab-label">En Az <span id="tab-custom-label">5</span><br>Oyun</span>
+            <span class="tab-count col-amber" id="cnt-custom"></span>
           </button>
           <div style="flex:1"></div>
         </div>
@@ -229,6 +234,7 @@
       <div class="raffle-box">
         <div class="raffle-title">Çekiliş</div>
         <div class="raffle-sub" id="raffle-pool-info">Aktif sekmeden çekilir</div>
+        <div style="font-size:10px; color:var(--muted); font-family:'IBM Plex Mono',monospace; margin-top:-10px; margin-bottom:14px;" id="raffle-search-note" style="display:none;">⚠ Arama havuzu etkilemez</div>
         <button class="raffle-btn" onclick="drawRaffle()">🎲 Çek</button>
         <div id="raffle-latest" class="raffle-latest" style="display:none;"></div>
         <div class="raffle-history-label" id="raffle-history-label" style="display:none;">Çekilen oyuncular</div>
@@ -360,6 +366,9 @@ function onSearch() {
   currentPage = 0;
   showAll = false;
   renderList();
+  const note = $('raffle-search-note');
+  if (note) note.style.display = ($('searchInput').value || '').trim() ? 'block' : 'none';
+  updateRaffleInfo();
 }
 function updateStats() {
   const done = allPlayers.filter(p => pStatus(p) === 'done').length;
@@ -569,9 +578,10 @@ $('url').addEventListener('keydown', e => { if (e.key === 'Enter') loadData(); }
 let raffleDrawn = new Set();
 
 function getActivePool() {
-  const q = ($('searchInput').value || '').toLowerCase();
+  // Çekiliş aramadan bağımsız — sadece aktif tab filtresi
   return allPlayers.filter(p => {
-    if (q && !p._n.toLowerCase().includes(q)) return false;
+    if (p._g === -1) return false;
+    if (raffleDrawn.has(p._n)) return false;
     if (currentFilter === 'completed') return pStatus(p) === 'done';
     if (currentFilter === 'lastround') return p._lastRound === true;
     if (currentFilter === 'custom') {
@@ -579,7 +589,7 @@ function getActivePool() {
       return (p._g ?? 0) >= min;
     }
     return true;
-  }).filter(p => !raffleDrawn.has(p._n) && p._g !== -1);
+  });
 }
 
 function updateRaffleInfo() {
@@ -597,6 +607,7 @@ function updateRaffleInfo() {
     return true;
   }).length;
   info.textContent = `${pool.length} / ${total} oyuncu havuzda`;
+  btn.textContent = pool.length > 0 ? `🎲 ${pool.length}/${total} kişi içinde çek` : '🎲 Havuz boş';
   btn.disabled = pool.length === 0;
 }
 
@@ -716,7 +727,7 @@ function copyRaffle() {
 }
 </script>
 <div style="text-align:center; padding: 24px 0 8px; font-family:'IBM Plex Mono',monospace; font-size:11px; color:#444;">
-  Son güncelleme: <span style="color:#666;">17.05.2026 02:00 UTC</span> &nbsp;·&nbsp; build <span style="color:#c8b560;">v1.0.16</span>
+  son güncelleme: <span style="color:#666;">17.05.2026 02:30 UTC</span> &nbsp;·&nbsp; build <span style="color:#c8b560;">v1.0.17</span>
 </div>
 </body>
 </html>
