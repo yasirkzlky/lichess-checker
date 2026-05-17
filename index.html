@@ -93,7 +93,16 @@
     .loading-row { display: flex; align-items: center; gap: 10px; padding: 28px 16px; color: var(--muted); font-size: 13px; font-family: 'IBM Plex Mono', monospace; }
     .spinner { width: 16px; height: 16px; border: 2px solid var(--border2); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; flex-shrink: 0; }
     @keyframes spin { to { transform: rotate(360deg); } }
+    .list-col { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+    .list-toolbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
     .empty { padding: 32px; text-align: center; color: var(--muted); font-size: 13px; font-family: 'IBM Plex Mono', monospace; }
+    .pagination { display: flex; align-items: center; gap: 4px; padding: 10px 14px; border-top: 1px solid var(--border); flex-wrap: wrap; }
+    .pg-btn { padding: 5px 10px; font-size: 12px; font-family: 'IBM Plex Mono', monospace; border: 1px solid var(--border2); background: transparent; color: var(--muted); border-radius: var(--r); cursor: pointer; transition: all 0.15s; min-width: 32px; }
+    .pg-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+    .pg-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+    .pg-btn.all-btn { color: var(--accent); border-color: rgba(200,181,96,0.4); }
+    .pg-btn.all-btn.active-all { background: rgba(200,181,96,0.15); }
+    .pg-info { font-size: 12px; font-family: 'IBM Plex Mono', monospace; color: var(--muted); padding: 0 8px; flex: 1; text-align: center; white-space: nowrap; }
     #results { display: none; }
     .raffle-box { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 18px; position: sticky; top: 20px; }
     .raffle-title { font-family: 'IBM Plex Mono', monospace; font-size: 14px; font-weight: 600; color: var(--accent); margin-bottom: 4px; }
@@ -162,43 +171,56 @@
 
     <div id="noteBox" class="note" style="display:none;"></div>
 
-    <div class="tab-bar">
-      <button class="tab-btn active" id="tab-all" onclick="setTab('all')">
-        Tüm Oyuncular <span class="tab-count" id="cnt-all"></span>
-      </button>
-      <button class="tab-btn" id="tab-completed" onclick="setTab('completed')">
-        Tüm Turları Oynayanlar <span class="tab-count col-green" id="cnt-completed"></span>
-      </button>
-      <button class="tab-btn" id="tab-lastround" onclick="setTab('lastround')">
-        Son Turu Oynayanlar <span class="tab-count col-amber" id="cnt-lastround"></span>
-      </button>
-      <button class="tab-btn" id="tab-custom" onclick="setTab('custom')">
-        En Az <span id="tab-custom-label">5</span> Oyun <span class="tab-count col-amber" id="cnt-custom"></span>
-      </button>
-      <div style="flex:1"></div>
-      <div class="search-wrap">
-        <input type="text" id="searchInput" placeholder="Oyuncu ara..." oninput="renderList()" />
-      </div>
-      <button class="copy-btn" onclick="copyCompleted()" style="margin: 6px 0;">⊕ Listeyi Kopyala</button>
-    </div>
-
-    <div id="custom-panel" style="display:none; padding:12px 16px; background:var(--surface2); border-bottom:1px solid var(--border); display:none; align-items:center; gap:10px;">
-      <span style="font-size:13px; font-family:'IBM Plex Mono',monospace; color:var(--muted);">En az kaç oyun:</span>
-      <input type="number" id="customMin" value="5" min="1" max="99"
-        style="width:70px; font-family:'IBM Plex Mono',monospace; font-size:13px;"
-        oninput="document.getElementById('tab-custom-label').textContent=this.value||5; updateCustomCount(); renderList()" />
-      <span style="font-size:12px; color:var(--muted); font-family:'IBM Plex Mono',monospace;" id="custom-result-label"></span>
-    </div>
-
     <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
 
     <div class="main-layout">
 
-      <div class="player-list">
-        <div class="list-header">
-          <div>#</div><div>Oyuncu</div><div>Rating</div><div style="text-align:right">Puan</div><div style="text-align:right">Durum</div>
+      <div class="list-col">
+        <div class="tab-bar">
+          <button class="tab-btn active" id="tab-all" onclick="setTab('all')">
+            Tüm Oyuncular <span class="tab-count" id="cnt-all"></span>
+          </button>
+          <button class="tab-btn" id="tab-completed" onclick="setTab('completed')">
+            Tüm Turları Oynayanlar <span class="tab-count col-green" id="cnt-completed"></span>
+          </button>
+          <button class="tab-btn" id="tab-lastround" onclick="setTab('lastround')">
+            Son Turu Oynayanlar <span class="tab-count col-amber" id="cnt-lastround"></span>
+          </button>
+          <button class="tab-btn" id="tab-custom" onclick="setTab('custom')">
+            En Az <span id="tab-custom-label">5</span> Oyun <span class="tab-count col-amber" id="cnt-custom"></span>
+          </button>
+          <div style="flex:1"></div>
         </div>
-        <div id="listBody"></div>
+        <div id="custom-panel" style="display:none; padding:12px 16px; background:var(--surface2); border-bottom:1px solid var(--border); display:none; align-items:center; gap:10px;">
+          <span style="font-size:13px; font-family:'IBM Plex Mono',monospace; color:var(--muted);">En az kaç oyun:</span>
+          <input type="number" id="customMin" value="5" min="1" max="99"
+            style="width:70px; font-family:'IBM Plex Mono',monospace; font-size:13px;"
+            oninput="document.getElementById('tab-custom-label').textContent=this.value||5; updateCustomCount(); renderList()" />
+          <span style="font-size:12px; color:var(--muted); font-family:'IBM Plex Mono',monospace;" id="custom-result-label"></span>
+        </div>
+        <div class="list-toolbar">
+          <div class="search-wrap" style="margin-left:0; flex:1; min-width:120px;">
+            <input type="text" id="searchInput" placeholder="Oyuncu ara..." oninput="onSearch()" />
+          </div>
+          <div style="display:flex; align-items:center; gap:4px;">
+            <button class="pg-btn" id="pg-first" onclick="goPage(0)" title="En başa">«</button>
+            <button class="pg-btn" id="pg-prev" onclick="goPage(currentPage-1)" title="Önceki">‹</button>
+            <span class="pg-info" id="pg-info">—</span>
+            <button class="pg-btn" id="pg-next" onclick="goPage(currentPage+1)" title="Sonraki">›</button>
+            <button class="pg-btn" id="pg-last" onclick="goPage(-1)" title="En sona">»</button>
+            <button class="pg-btn all-btn" id="pg-all" onclick="toggleAll()" title="Tümünü göster">Tümü</button>
+          </div>
+          <button class="copy-btn" onclick="copyCompleted()" style="margin:0;">⊕ Kopyala</button>
+        </div>
+
+        <div class="player-list">
+          <div class="list-header">
+            <div>#</div><div>Oyuncu</div><div>Rating</div><div style="text-align:right">Puan</div><div style="text-align:right">Durum</div>
+          </div>
+          <div id="listBody"></div>
+        </div>
+      </div>
+
       </div>
 
       <div class="raffle-box">
@@ -218,6 +240,7 @@
 </div>
 <script>
 let allPlayers = [], currentFilter = 'all', maxR = 9;
+let currentPage = 0, pageSize = 10, showAll = false;
 
 const $ = id => document.getElementById(id);
 
@@ -255,13 +278,14 @@ function setTab(t) {
     const lbl = document.getElementById('tab-custom-label');
     if (lbl) lbl.textContent = $('customMin').value || 5;
   }, 50);
+  currentPage = 0; showAll = false;
   renderList();
   if (typeof updateRaffleInfo === 'function') updateRaffleInfo();
 }
 function setFilter(f) { setTab(f); }
-function renderList() {
+function getFiltered() {
   const q = ($('searchInput').value || '').toLowerCase();
-  const data = allPlayers.filter(p => {
+  return allPlayers.filter(p => {
     if (q && !p._n.toLowerCase().includes(q)) return false;
     if (currentFilter === 'completed') return pStatus(p) === 'done';
     if (currentFilter === 'lastround') return p._lastRound === true;
@@ -271,19 +295,68 @@ function renderList() {
     }
     return true;
   });
-  if (!data.length) { $('listBody').innerHTML = '<div class="empty">Oyuncu bulunamadı.</div>'; return; }
-  $('listBody').innerHTML = data.map((p, i) => {
+}
+
+function renderList() {
+  const data = getFiltered();
+  const total = data.length;
+  if (!total) { $('listBody').innerHTML = '<div class="empty">Oyuncu bulunamadı.</div>'; updatePagination(0, 0, 0); return; }
+
+  const totalPages = Math.ceil(total / pageSize);
+  if (currentPage >= totalPages) currentPage = totalPages - 1;
+  if (currentPage < 0) currentPage = 0;
+
+  const slice = showAll ? data : data.slice(currentPage * pageSize, (currentPage + 1) * pageSize);
+  const startIdx = showAll ? 0 : currentPage * pageSize;
+
+  $('listBody').innerHTML = slice.map((p, i) => {
     const s = pStatus(p);
     const bc = s === 'done' ? 'badge-done' : s === 'partial' ? 'badge-partial' : s === 'loading' ? 'badge-loading' : 'badge-absent';
     const bt = s === 'done' ? 'DONE' : s === 'partial' ? `${p._g}/${maxR}` : p._g === -1 ? '...' : 'YOK';
     return `<div class="player-row">
-      <div class="rank">${i+1}</div>
+      <div class="rank">${startIdx + i + 1}</div>
       <div class="pname"><a href="https://lichess.org/@/${p._n}" target="_blank">${p._n}</a></div>
       <div class="rating">${p._r}</div>
       <div class="score">${p._s}</div>
       <div style="text-align:right"><span class="badge ${bc}">${bt}</span></div>
     </div>`;
   }).join('');
+
+  updatePagination(currentPage, totalPages, total);
+}
+
+function updatePagination(page, totalPages, total) {
+  const first = $('pg-first'), prev = $('pg-prev'), next = $('pg-next'), last = $('pg-last'), info = $('pg-info'), allBtn = $('pg-all');
+  if (!info) return;
+  if (showAll || totalPages <= 1) {
+    info.textContent = `${total} oyuncu`;
+    if (first) { first.disabled = true; prev.disabled = true; next.disabled = true; last.disabled = true; }
+  } else {
+    const from = page * pageSize + 1, to = Math.min((page + 1) * pageSize, total);
+    info.textContent = `${from}-${to} / ${total}`;
+    if (first) { first.disabled = page === 0; prev.disabled = page === 0; next.disabled = page >= totalPages - 1; last.disabled = page >= totalPages - 1; }
+  }
+  if (allBtn) allBtn.classList.toggle('active-all', showAll);
+}
+
+function goPage(p) {
+  const data = getFiltered();
+  const totalPages = Math.ceil(data.length / pageSize);
+  if (p === -1) currentPage = totalPages - 1;
+  else currentPage = Math.max(0, Math.min(p, totalPages - 1));
+  showAll = false;
+  renderList();
+}
+
+function toggleAll() {
+  showAll = !showAll;
+  renderList();
+}
+
+function onSearch() {
+  currentPage = 0;
+  showAll = false;
+  renderList();
 }
 function updateStats() {
   const done = allPlayers.filter(p => pStatus(p) === 'done').length;
@@ -477,17 +550,7 @@ async function loadData() {
 }
 
 function copyCompleted() {
-  const q = ($('searchInput').value || '').toLowerCase();
-  const data = allPlayers.filter(p => {
-    if (q && !p._n.toLowerCase().includes(q)) return false;
-    if (currentFilter === 'completed') return pStatus(p) === 'done';
-    if (currentFilter === 'lastround') return p._lastRound === true;
-    if (currentFilter === 'custom') {
-      const min = parseInt($('customMin')?.value) || 1;
-      return (p._g ?? 0) >= min;
-    }
-    return true;
-  });
+  const data = getFiltered();
   const names = data.map(p => p._n).join('\n');
   if (!names) { alert('Oyuncu yok.'); return; }
   navigator.clipboard.writeText(names).then(() => {
@@ -583,7 +646,7 @@ function copyRaffle() {
 }
 </script>
 <div style="text-align:center; padding: 24px 0 8px; font-family:'IBM Plex Mono',monospace; font-size:11px; color:#444;">
-  Son Güncelleme: <span style="color:#666;">17.05.2026 01:30 UTC</span> &nbsp;·&nbsp; build <span style="color:#c8b560;">v1.0.13</span>
+  Son güncelleme: <span style="color:#666;">17.05.2026 01:45 UTC</span> &nbsp;·&nbsp; build <span style="color:#c8b560;">v1.0.14</span>
 </div>
 </body>
 </html>
