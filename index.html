@@ -122,6 +122,11 @@
     .raffle-entry-name a:hover { color: var(--accent); }
     .raffle-reset { width: 100%; margin-top: 12px; padding: 7px; background: transparent; border: 1px solid var(--border2); border-radius: var(--r); font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: var(--muted); cursor: pointer; transition: all 0.15s; }
     .raffle-reset:hover { border-color: var(--red); color: var(--red); }
+    .raffle-del { background: none; border: none; color: var(--border2); cursor: pointer; font-size: 14px; padding: 0 2px; line-height: 1; transition: color 0.15s; flex-shrink: 0; }
+    .raffle-del:hover { color: var(--red); }
+    #confetti-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 9999; }
+    @keyframes raffle-spin { 0%{transform:scale(1) rotate(0deg);opacity:1} 40%{transform:scale(1.15) rotate(-8deg);opacity:1} 70%{transform:scale(1.1) rotate(6deg);opacity:1} 100%{transform:scale(1) rotate(0deg);opacity:1} }
+    .raffle-latest.popping { animation: raffle-spin 0.5s ease; }
 
     .main-layout { display: grid; grid-template-columns: 1fr 280px; gap: 16px; align-items: start; }
 
@@ -148,13 +153,14 @@
   </style>
 </head>
 <body>
+<canvas id="confetti-canvas"></canvas>
 <div class="page">
 
   <header>
     <div class="logo-box">♟</div>
     <div>
       <div class="logo-title">lichess <span>checker</span></div>
-      <div class="logo-sub">turnuva tamamlama analizi</div>
+      <div class="logo-sub">turnuva tamamlama analizi & çekiliş</div>
     </div>
   </header>
 
@@ -600,25 +606,93 @@ function drawRaffle() {
   const winner = pool[Math.floor(Math.random() * pool.length)];
   raffleDrawn.add(winner._n);
 
-  // Show latest winner
+  // Animate latest box
   const latest = $('raffle-latest');
   latest.style.display = 'block';
+  latest.classList.remove('popping');
+  void latest.offsetWidth;
+  latest.classList.add('popping');
   latest.innerHTML = `<div class="raffle-latest-name">🎉 ${winner._n}</div>
     <div class="raffle-latest-sub">${winner._r ? 'Rating: ' + winner._r + ' · ' : ''}Puan: ${winner._s}</div>`;
 
-  // Add to history
+  // Confetti burst
+  launchConfetti();
+
+  // Add to history with delete button
   const history = $('raffle-history');
   const count = raffleDrawn.size;
   const entry = document.createElement('div');
   entry.className = 'raffle-entry';
+  entry.dataset.name = winner._n;
   entry.innerHTML = `<span class="raffle-entry-num">${count}.</span>
-    <span class="raffle-entry-name"><a href="https://lichess.org/@/${winner._n}" target="_blank">${winner._n}</a></span>`;
+    <span class="raffle-entry-name"><a href="https://lichess.org/@/${winner._n}" target="_blank">${winner._n}</a></span>
+    <button class="raffle-del" title="Sil" onclick="deleteRaffleEntry(this, '${winner._n}')">✕</button>`;
   history.insertBefore(entry, history.firstChild);
 
   $('raffle-history-label').style.display = 'block';
   $('raffle-reset').style.display = 'block';
   $('raffle-copy').style.display = 'block';
   updateRaffleInfo();
+}
+
+function deleteRaffleEntry(btn, name) {
+  raffleDrawn.delete(name);
+  btn.closest('.raffle-entry').remove();
+  // Renumber remaining entries
+  const entries = $('raffle-history').querySelectorAll('.raffle-entry');
+  entries.forEach((el, i) => {
+    el.querySelector('.raffle-entry-num').textContent = (entries.length - i) + '.';
+  });
+  if (!raffleDrawn.size) {
+    $('raffle-history-label').style.display = 'none';
+    $('raffle-reset').style.display = 'none';
+    $('raffle-copy').style.display = 'none';
+    $('raffle-latest').style.display = 'none';
+  }
+  updateRaffleInfo();
+}
+
+function launchConfetti() {
+  const canvas = $('confetti-canvas');
+  const ctx = canvas.getContext('2d');
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+
+  const colors = ['#c8b560','#5cba7d','#6098d4','#d4537e','#e8d080','#5dcaa5'];
+  const particles = Array.from({length: 80}, () => ({
+    x: Math.random() * canvas.width,
+    y: Math.random() * canvas.height * 0.4,
+    r: Math.random() * 6 + 3,
+    d: Math.random() * 60 + 20,
+    color: colors[Math.floor(Math.random() * colors.length)],
+    tilt: Math.random() * 10 - 10,
+    tiltAngle: 0,
+    tiltSpeed: Math.random() * 0.1 + 0.05,
+    vy: Math.random() * 3 + 2,
+    vx: Math.random() * 2 - 1,
+    opacity: 1,
+  }));
+
+  let frame = 0;
+  function animate() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    particles.forEach(p => {
+      p.tiltAngle += p.tiltSpeed;
+      p.y += p.vy;
+      p.x += p.vx;
+      p.opacity -= 0.012;
+      p.tilt = Math.sin(p.tiltAngle) * 12;
+      ctx.beginPath();
+      ctx.globalAlpha = Math.max(0, p.opacity);
+      ctx.fillStyle = p.color;
+      ctx.ellipse(p.x, p.y, p.r, p.r * 0.4, p.tilt, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    frame++;
+    if (frame < 120) requestAnimationFrame(animate);
+    else ctx.clearRect(0, 0, canvas.width, canvas.height);
+  }
+  requestAnimationFrame(animate);
 }
 
 function resetRaffle() {
@@ -642,7 +716,7 @@ function copyRaffle() {
 }
 </script>
 <div style="text-align:center; padding: 24px 0 8px; font-family:'IBM Plex Mono',monospace; font-size:11px; color:#444;">
-  Son güncelleme: <span style="color:#666;">17.05.2026 01:30 UTC</span> &nbsp;·&nbsp; build <span style="color:#c8b560;">v1.0.15</span>
+  Son güncelleme: <span style="color:#666;">17.05.2026 01:55 UTC</span> &nbsp;·&nbsp; build <span style="color:#c8b560;">v1.0.16</span>
 </div>
 </body>
 </html>
