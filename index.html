@@ -64,7 +64,8 @@
     .search-wrap input { padding: 6px 12px; font-size: 12px; }
     .copy-btn { padding: 6px 14px; font-size: 12px; font-family: 'IBM Plex Mono', monospace; border: 1px solid var(--border2); background: transparent; color: var(--muted); border-radius: var(--r); cursor: pointer; transition: all 0.15s; }
     .copy-btn:hover { border-color: var(--accent); color: var(--accent); }
-    .tab-bar { display: flex; gap: 0; margin-bottom: 0; flex-wrap: wrap; align-items: center; border-bottom: 1px solid var(--border); }
+    .tab-bar { display: flex; gap: 0; margin-bottom: 0; flex-wrap: nowrap; overflow-x: auto; align-items: center; border-bottom: 1px solid var(--border); scrollbar-width: none; }
+    .tab-bar::-webkit-scrollbar { display: none; }
     .tab-btn { padding: 10px 20px; font-size: 13px; font-family: 'IBM Plex Mono', monospace; border: none; border-bottom: 2px solid transparent; background: transparent; color: var(--muted); cursor: pointer; transition: all 0.15s; margin-bottom: -1px; }
     .tab-btn:hover { color: var(--text); }
     .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
@@ -127,8 +128,9 @@
 
     @media (max-width: 760px) {
       body { padding: 16px 12px; }
-      .main-layout { grid-template-columns: 1fr; }
-      .raffle-box { position: static; order: -1; }
+      .main-layout { display: flex; flex-direction: column; gap: 16px; }
+      .raffle-box { position: static; order: 1; }
+      .list-col { order: 2; }
       .tab-btn { padding: 8px 12px; font-size: 12px; }
       .tab-bar { overflow-x: auto; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; }
       .tab-bar::-webkit-scrollbar { display: none; }
@@ -646,7 +648,7 @@ function copyRaffle() {
 }
 </script>
 <div style="text-align:center; padding: 24px 0 8px; font-family:'IBM Plex Mono',monospace; font-size:11px; color:#444;">
-  Son güncelleme: <span style="color:#666;">17.05.2026 01:45 UTC</span> &nbsp;·&nbsp; build <span style="color:#c8b560;">v1.0.14</span>
+  Son güncelleme: <span style="color:#666;">17.05.2026 01:55 UTC</span> &nbsp;·&nbsp; build <span style="color:#c8b560;">v1.0.15</span>
 </div>
 </body>
 </html>
