@@ -178,7 +178,7 @@
   <div class="popup-box">
     <div class="popup-header">
       <div class="popup-spinner" id="popupSpinner"></div>
-      <div class="popup-title" id="popupTitle">Turnuva yükleniyor...</div>
+      <div class="popup-title" id="popupTitle">Turnuva verileri işleniyor...</div>
     </div>
     <div class="popup-steps">
       <div class="popup-step" id="step-info">
@@ -343,6 +343,9 @@ function setPopupProgress(pct) {
 }
 function setPopupStatus(msg) {
   $('popupStatus').textContent = msg;
+  // Popup gizli olsa bile bilgileri noteBox'ta göster
+  const nb = $('noteBox');
+  if (nb) { nb.textContent = '⏳ ' + msg; nb.style.display = 'block'; }
 }
 function finishPopup(msg) {
   $('popupSpinner').classList.add('done');
@@ -354,8 +357,11 @@ function finishPopup(msg) {
     el.querySelector('.popup-step-icon').innerHTML = '✓';
   });
   setPopupProgress(100);
-  setPopupStatus(msg);
+  $('popupStatus').textContent = msg;
   $('popupCloseBtn').classList.add('visible');
+  // Son bilgiyi noteBox'ta da göster
+  const nb = $('noteBox');
+  if (nb) { nb.textContent = '✓ ' + msg; nb.style.display = 'block'; }
   // Auto-close after 3s if user hasn't interacted
   setTimeout(() => closePopup(), 3000);
 }
@@ -602,7 +608,6 @@ async function loadData() {
         const _elapsed2 = ((performance.now() - _t0) / 1000).toFixed(1);
         const doneCount = allPlayers.filter(p => pStatus(p) === 'done').length;
         $('tourMeta').textContent = `Swiss · ${maxR} tur · ${info.nbPlayers ?? '?'} oyuncu · ⏱ ${_elapsed2}s`;
-        $('noteBox').style.display = 'none';
         finishPopup(`${gameCount} oyun işlendi · ${doneCount} tamamladı · Toplam süre: ${_elapsed2}s`);
         updateRaffleInfo();
       })();
@@ -840,7 +845,7 @@ function copyRaffle() {
 }
 </script>
 <div style="text-align:center; padding: 24px 0 8px; font-family:'IBM Plex Mono',monospace; font-size:11px; color:#444;">
-  Son güncelleme: <span style="color:#666;">13.06.2026 23:00 UTC</span> &nbsp;·&nbsp; build <span style="color:#c8b560;">v1.0.22</span>
+  Son güncelleme: <span style="color:#666;">13.06.2026 23:30 UTC</span> &nbsp;·&nbsp; build <span style="color:#c8b560;">v1.0.26</span>
 </div>
 </body>
 </html>
