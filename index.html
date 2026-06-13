@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Lichess Turnuva Checker</title>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
@@ -25,7 +26,6 @@
     .logo-sub { font-size: 12px; color: var(--muted); font-family: 'IBM Plex Mono', monospace; margin-top: 2px; }
 
     .card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 20px; margin-bottom: 20px; }
-
     label { display: block; font-size: 11px; font-family: 'IBM Plex Mono', monospace; color: var(--muted); letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 6px; }
     input[type=text], input[type=number] {
       width: 100%; background: var(--bg); border: 1px solid var(--border2); border-radius: var(--r);
@@ -35,32 +35,18 @@
     input:focus { border-color: var(--accent); }
     input::placeholder { color: #444; }
 
-    .input-row { display: grid; grid-template-columns: 1fr auto; gap: 10px; margin-top: 14px; align-items: end; }
-
-    #btn {
-      padding: 10px 22px; background: var(--accent); color: #0e0e0e;
-      border: none; border-radius: var(--r); font-family: 'IBM Plex Mono', monospace;
-      font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap;
-      transition: background 0.15s, opacity 0.15s;
-    }
+    #btn { padding: 10px 22px; background: var(--accent); color: #0e0e0e; border: none; border-radius: var(--r); font-family: 'IBM Plex Mono', monospace; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; transition: background 0.15s, opacity 0.15s; }
     #btn:hover { background: var(--accent2); }
     #btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
-    .stat { background: var(--surface2); border-radius: var(--r); padding: 14px 16px; }
     .col-green { color: var(--green); }
     .col-amber { color: var(--amber); }
-
     .tour-title { font-size: 15px; font-weight: 600; color: var(--accent); font-family: 'IBM Plex Mono', monospace; margin-bottom: 3px; }
     .tour-meta { font-size: 12px; color: var(--muted); font-family: 'IBM Plex Mono', monospace; margin-bottom: 18px; }
 
-    .toolbar { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; align-items: center; }
-    .filter-btn { padding: 6px 14px; font-size: 12px; font-family: 'IBM Plex Mono', monospace; border-radius: 20px; border: 1px solid var(--border2); background: transparent; color: var(--muted); cursor: pointer; transition: all 0.15s; }
-    .filter-btn:hover { border-color: var(--accent); color: var(--accent); }
-    .filter-btn.active { background: var(--accent); border-color: var(--accent); color: #0e0e0e; }
-    .search-wrap { flex: 1; min-width: 160px; }
-    .search-wrap input { padding: 6px 12px; font-size: 12px; }
     .copy-btn { padding: 6px 14px; font-size: 12px; font-family: 'IBM Plex Mono', monospace; border: 1px solid var(--border2); background: transparent; color: var(--muted); border-radius: var(--r); cursor: pointer; transition: all 0.15s; }
     .copy-btn:hover { border-color: var(--accent); color: var(--accent); }
+
     .tab-bar { display: flex; gap: 0; margin-bottom: 0; flex-wrap: nowrap; overflow-x: auto; align-items: center; border-bottom: 1px solid var(--border); scrollbar-width: none; }
     .tab-bar::-webkit-scrollbar { display: none; }
     .tab-btn { padding: 10px 16px; font-size: 12px; font-family: 'IBM Plex Mono', monospace; border: none; border-bottom: 2px solid transparent; background: transparent; color: var(--muted); cursor: pointer; transition: all 0.15s; margin-bottom: -1px; display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center; }
@@ -69,7 +55,6 @@
     .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
     .tab-count { font-size: 11px; font-family: 'IBM Plex Mono', monospace; background: var(--surface2); border-radius: 10px; padding: 1px 8px; margin-left: 0; color: var(--muted); display: block; }
     .tab-btn.active .tab-count { background: rgba(200,181,96,0.15); }
-    .search-wrap { margin-left: 8px; }
 
     .player-list { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
     .list-header { display: grid; grid-template-columns: 40px 1fr 80px 70px 100px; padding: 10px 16px; border-bottom: 1px solid var(--border); font-size: 10px; font-family: 'IBM Plex Mono', monospace; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
@@ -94,6 +79,8 @@
     @keyframes spin { to { transform: rotate(360deg); } }
     .list-col { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
     .list-toolbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .search-wrap { flex: 1; min-width: 120px; }
+    .search-wrap input { padding: 6px 12px; font-size: 12px; }
     .empty { padding: 32px; text-align: center; color: var(--muted); font-size: 13px; font-family: 'IBM Plex Mono', monospace; }
     .pg-btn { padding: 5px 10px; font-size: 12px; font-family: 'IBM Plex Mono', monospace; border: 1px solid var(--border2); background: transparent; color: var(--muted); border-radius: var(--r); cursor: pointer; transition: all 0.15s; min-width: 32px; }
     .pg-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
@@ -102,8 +89,11 @@
     .pg-btn.all-btn.active-all { background: rgba(200,181,96,0.15); }
     .pg-info { font-size: 12px; font-family: 'IBM Plex Mono', monospace; color: var(--muted); padding: 0 8px; flex: 1; text-align: center; white-space: nowrap; }
     #results { display: none; }
+
     .raffle-box { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 18px; position: sticky; top: 20px; }
     .raffle-title { font-family: 'IBM Plex Mono', monospace; font-size: 14px; font-weight: 600; color: var(--accent); margin-bottom: 4px; }
+    .screenshot-btn { width: 100%; padding: 9px; margin-bottom: 14px; background: transparent; border: 1px solid var(--red); border-radius: var(--r); color: var(--red); font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.15s; display: flex; align-items: center; justify-content: center; gap: 6px; }
+    .screenshot-btn:hover { background: rgba(217,96,96,0.12); }
     .raffle-sub { font-size: 11px; font-family: 'IBM Plex Mono', monospace; color: var(--muted); margin-bottom: 14px; }
     .raffle-btn { width: 100%; padding: 11px; background: var(--accent); color: #0e0e0e; border: none; border-radius: var(--r); font-family: 'IBM Plex Mono', monospace; font-size: 13px; font-weight: 600; cursor: pointer; transition: background 0.15s; }
     .raffle-btn:hover { background: var(--accent2); }
@@ -111,8 +101,6 @@
     .raffle-latest { margin-top: 14px; padding: 12px; background: rgba(200,181,96,0.1); border: 1px solid rgba(200,181,96,0.3); border-radius: var(--r); text-align: center; }
     .raffle-latest-name { font-family: 'IBM Plex Mono', monospace; font-size: 15px; font-weight: 600; color: var(--accent); margin-bottom: 6px; }
     .raffle-latest-sub { font-size: 11px; color: var(--muted); font-family: 'IBM Plex Mono', monospace; margin-top: 3px; }
-    .raffle-msg-btn { display: inline-block; margin-top: 8px; padding: 5px 14px; font-size: 11px; font-family: 'IBM Plex Mono', monospace; border: 1px solid rgba(200,181,96,0.5); border-radius: var(--r); color: var(--accent); background: transparent; cursor: pointer; text-decoration: none; transition: all 0.15s; }
-    .raffle-msg-btn:hover { background: rgba(200,181,96,0.15); }
     .raffle-history-label { font-size: 10px; font-family: 'IBM Plex Mono', monospace; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin: 14px 0 6px; }
     .raffle-entry { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 12px; font-family: 'IBM Plex Mono', monospace; }
     .raffle-entry:last-child { border-bottom: none; }
@@ -127,8 +115,36 @@
     .raffle-del { background: none; border: none; color: var(--border2); cursor: pointer; font-size: 14px; padding: 0 2px; line-height: 1; transition: color 0.15s; flex-shrink: 0; }
     .raffle-del:hover { color: var(--red); }
     #confetti-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 9999; }
-    @keyframes raffle-spin { 0%{transform:scale(1) rotate(0deg);opacity:1} 40%{transform:scale(1.15) rotate(-8deg);opacity:1} 70%{transform:scale(1.1) rotate(6deg);opacity:1} 100%{transform:scale(1) rotate(0deg);opacity:1} }
+    @keyframes raffle-spin { 0%{transform:scale(1) rotate(0deg)} 40%{transform:scale(1.15) rotate(-8deg)} 70%{transform:scale(1.1) rotate(6deg)} 100%{transform:scale(1) rotate(0deg)} }
     .raffle-latest.popping { animation: raffle-spin 0.5s ease; }
+
+    /* ===== LOADING POPUP ===== */
+    .popup-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 1000; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(3px); opacity: 0; transition: opacity 0.2s; pointer-events: none; }
+    .popup-overlay.visible { opacity: 1; pointer-events: all; }
+    .popup-box { background: var(--surface); border: 1px solid var(--border2); border-radius: 14px; padding: 28px 32px; width: 100%; max-width: 400px; margin: 16px; }
+    .popup-header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+    .popup-spinner { width: 20px; height: 20px; border: 2px solid var(--border2); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; flex-shrink: 0; }
+    .popup-spinner.done { animation: none; border-color: var(--green); border-top-color: var(--green); }
+    .popup-title { font-family: 'IBM Plex Mono', monospace; font-size: 14px; font-weight: 600; color: var(--text); }
+    .popup-steps { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+    .popup-step { display: flex; align-items: center; gap: 10px; font-size: 13px; font-family: 'IBM Plex Mono', monospace; color: var(--muted); }
+    .popup-step-icon { width: 18px; height: 18px; border-radius: 50%; border: 1px solid var(--border2); display: flex; align-items: center; justify-content: center; font-size: 10px; flex-shrink: 0; }
+    .popup-step.active .popup-step-icon { border-color: var(--accent); background: rgba(200,181,96,0.15); }
+    .popup-step.active { color: var(--accent); }
+    .popup-step.complete .popup-step-icon { border-color: var(--green); background: rgba(92,186,125,0.15); color: var(--green); }
+    .popup-step.complete { color: var(--muted); }
+    .popup-step-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--border2); margin: 0 auto; }
+    .popup-step.active .popup-step-dot { background: var(--accent); }
+    .popup-step.complete .popup-step-dot { background: var(--green); }
+    .popup-progress { height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; margin-bottom: 20px; }
+    .popup-progress-fill { height: 100%; background: var(--accent); border-radius: 2px; transition: width 0.4s ease; width: 0%; }
+    .popup-status { font-size: 12px; font-family: 'IBM Plex Mono', monospace; color: var(--muted); margin-bottom: 16px; min-height: 16px; }
+    .popup-footer { display: flex; align-items: center; gap: 10px; padding-top: 16px; border-top: 1px solid var(--border); }
+    .popup-check { display: flex; align-items: center; gap: 8px; font-size: 12px; font-family: 'IBM Plex Mono', monospace; color: var(--muted); cursor: pointer; user-select: none; }
+    .popup-check input[type=checkbox] { width: 14px; height: 14px; accent-color: var(--accent); cursor: pointer; }
+    .popup-close-btn { margin-left: auto; padding: 6px 16px; background: var(--accent); color: #0e0e0e; border: none; border-radius: var(--r); font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 600; cursor: pointer; display: none; }
+    .popup-close-btn:hover { background: var(--accent2); }
+    .popup-close-btn.visible { display: block; }
 
     .main-layout { display: grid; grid-template-columns: 1fr 280px; gap: 16px; align-items: start; }
 
@@ -142,8 +158,8 @@
       .tab-bar::-webkit-scrollbar { display: none; }
       .search-wrap { min-width: 120px; }
       header { margin-bottom: 20px; }
+      .popup-box { padding: 20px; }
     }
-
     @media (max-width: 580px) {
       .list-header, .player-row { grid-template-columns: 28px 1fr 55px 80px; }
       .rating { display: none; }
@@ -156,8 +172,41 @@
 </head>
 <body>
 <canvas id="confetti-canvas"></canvas>
-<div class="page">
 
+<!-- LOADING POPUP -->
+<div class="popup-overlay" id="loadingPopup">
+  <div class="popup-box">
+    <div class="popup-header">
+      <div class="popup-spinner" id="popupSpinner"></div>
+      <div class="popup-title" id="popupTitle">Turnuva yükleniyor...</div>
+    </div>
+    <div class="popup-steps">
+      <div class="popup-step" id="step-info">
+        <div class="popup-step-icon"><div class="popup-step-dot"></div></div>
+        <span>Turnuva bilgileri</span>
+      </div>
+      <div class="popup-step" id="step-players">
+        <div class="popup-step-icon"><div class="popup-step-dot"></div></div>
+        <span>Oyuncu listesi</span>
+      </div>
+      <div class="popup-step" id="step-games">
+        <div class="popup-step-icon"><div class="popup-step-dot"></div></div>
+        <span>Oyun verileri</span>
+      </div>
+    </div>
+    <div class="popup-progress"><div class="popup-progress-fill" id="popupProgress"></div></div>
+    <div class="popup-status" id="popupStatus">Bağlanılıyor...</div>
+    <div class="popup-footer">
+      <label class="popup-check">
+        <input type="checkbox" id="popupDontShow" onchange="saveDontShow(this.checked)" />
+        Bir daha gösterme
+      </label>
+      <button class="popup-close-btn" id="popupCloseBtn" onclick="closePopup()">Tamam ✓</button>
+    </div>
+  </div>
+</div>
+
+<div class="page">
   <header>
     <div class="logo-box">♟</div>
     <div>
@@ -177,11 +226,9 @@
   <div id="results">
     <div class="tour-title" id="tourTitle"></div>
     <div class="tour-meta" id="tourMeta"></div>
-
     <div id="noteBox" class="note" style="display:none;"></div>
 
     <div class="main-layout">
-
       <div class="list-col">
         <div class="tab-bar">
           <button class="tab-btn active" id="tab-all" onclick="setTab('all')">
@@ -210,7 +257,7 @@
           <span style="font-size:12px; color:var(--muted); font-family:'IBM Plex Mono',monospace;" id="custom-result-label"></span>
         </div>
         <div class="list-toolbar">
-          <div class="search-wrap" style="margin-left:0; flex:1; min-width:120px;">
+          <div class="search-wrap" style="margin-left:0;">
             <input type="text" id="searchInput" placeholder="Oyuncu ara..." oninput="onSearch()" />
           </div>
           <div style="display:flex; align-items:center; gap:4px;">
@@ -223,7 +270,6 @@
           </div>
           <button class="copy-btn" onclick="copyCompleted()" style="margin:0;">⊕ Kopyala</button>
         </div>
-
         <div class="player-list">
           <div class="list-header">
             <div>#</div><div>Oyuncu</div><div>Rating</div><div style="text-align:right">Puan</div><div style="text-align:right">Durum</div>
@@ -234,6 +280,8 @@
 
       <div class="raffle-box">
         <div class="raffle-title">Çekiliş</div>
+        <div id="raffle-tour-name" style="font-size:11px; font-family:'IBM Plex Mono',monospace; color:var(--muted); margin-bottom:12px; display:none;"></div>
+        <button class="screenshot-btn" onclick="takeScreenshot()">📸 Ekran Görüntüsü Al</button>
         <div class="raffle-sub" id="raffle-pool-info">Aktif sekmeden çekilir</div>
         <button class="raffle-btn" id="raffle-btn" onclick="drawRaffle()">🎲 Çek</button>
         <div id="raffle-latest" class="raffle-latest" style="display:none;"></div>
@@ -242,17 +290,77 @@
         <button class="raffle-reset" id="raffle-reset" onclick="resetRaffle()" style="display:none;">↺ Sıfırla</button>
         <button class="raffle-reset" id="raffle-copy" onclick="copyRaffle()" style="display:none; margin-top:6px;">⊕ Çekilenleri Kopyala</button>
       </div>
-
     </div>
   </div>
-
 </div>
+
 <script>
 let allPlayers = [], currentFilter = 'all', maxR = 9;
 let currentPage = 0, pageSize = 10, showAll = false;
-
 const $ = id => document.getElementById(id);
 
+// ===== POPUP =====
+function showPopup() {
+  if (localStorage.getItem('lc-popup-hide') === '1') return;
+  const overlay = $('loadingPopup');
+  overlay.classList.add('visible');
+  $('popupDontShow').checked = false;
+  $('popupCloseBtn').classList.remove('visible');
+  $('popupSpinner').classList.remove('done');
+  $('popupTitle').textContent = 'Turnuva yükleniyor...';
+  setStep(null);
+  setPopupProgress(0);
+  setPopupStatus('Bağlanılıyor...');
+}
+function closePopup() {
+  $('loadingPopup').classList.remove('visible');
+}
+function saveDontShow(val) {
+  localStorage.setItem('lc-popup-hide', val ? '1' : '0');
+}
+function setStep(active) {
+  // active: 'info' | 'players' | 'games' | null
+  const steps = ['info', 'players', 'games'];
+  const labels = { info: 'Turnuva bilgileri', players: 'Oyuncu listesi', games: 'Oyun verileri' };
+  const activeIdx = steps.indexOf(active);
+  steps.forEach((s, i) => {
+    const el = $(`step-${s}`);
+    el.className = 'popup-step';
+    const icon = el.querySelector('.popup-step-icon');
+    if (i < activeIdx) {
+      el.classList.add('complete');
+      icon.innerHTML = '✓';
+    } else if (i === activeIdx) {
+      el.classList.add('active');
+      icon.innerHTML = '<div class="popup-step-dot"></div>';
+    } else {
+      icon.innerHTML = '<div class="popup-step-dot"></div>';
+    }
+  });
+}
+function setPopupProgress(pct) {
+  $('popupProgress').style.width = pct + '%';
+}
+function setPopupStatus(msg) {
+  $('popupStatus').textContent = msg;
+}
+function finishPopup(msg) {
+  $('popupSpinner').classList.add('done');
+  $('popupTitle').textContent = '✓ Yükleme tamamlandı';
+  setStep(null);
+  ['info','players','games'].forEach(s => {
+    const el = $(`step-${s}`);
+    el.className = 'popup-step complete';
+    el.querySelector('.popup-step-icon').innerHTML = '✓';
+  });
+  setPopupProgress(100);
+  setPopupStatus(msg);
+  $('popupCloseBtn').classList.add('visible');
+  // Auto-close after 3s if user hasn't interacted
+  setTimeout(() => closePopup(), 3000);
+}
+
+// ===== CORE =====
 function detectType(s) {
   if (s.includes('/swiss/')) return 'swiss';
   if (s.includes('/tournament/')) return 'arena';
@@ -291,7 +399,6 @@ function setTab(t) {
   renderList();
   if (typeof updateRaffleInfo === 'function') updateRaffleInfo();
 }
-function setFilter(f) { setTab(f); }
 function getFiltered() {
   const q = ($('searchInput').value || '').toLowerCase();
   return allPlayers.filter(p => {
@@ -305,19 +412,15 @@ function getFiltered() {
     return true;
   });
 }
-
 function renderList() {
   const data = getFiltered();
   const total = data.length;
   if (!total) { $('listBody').innerHTML = '<div class="empty">Oyuncu bulunamadı.</div>'; updatePagination(0, 0, 0); return; }
-
   const totalPages = Math.ceil(total / pageSize);
   if (currentPage >= totalPages) currentPage = totalPages - 1;
   if (currentPage < 0) currentPage = 0;
-
   const slice = showAll ? data : data.slice(currentPage * pageSize, (currentPage + 1) * pageSize);
   const startIdx = showAll ? 0 : currentPage * pageSize;
-
   $('listBody').innerHTML = slice.map((p, i) => {
     const s = pStatus(p);
     const bc = s === 'done' ? 'badge-done' : s === 'partial' ? 'badge-partial' : s === 'loading' ? 'badge-loading' : 'badge-absent';
@@ -330,24 +433,21 @@ function renderList() {
       <div style="text-align:right"><span class="badge ${bc}">${bt}</span></div>
     </div>`;
   }).join('');
-
   updatePagination(currentPage, totalPages, total);
 }
-
 function updatePagination(page, totalPages, total) {
-  const first = $('pg-first'), prev = $('pg-prev'), next = $('pg-next'), last = $('pg-last'), info = $('pg-info'), allBtn = $('pg-all');
+  const first=$('pg-first'),prev=$('pg-prev'),next=$('pg-next'),last=$('pg-last'),info=$('pg-info'),allBtn=$('pg-all');
   if (!info) return;
   if (showAll || totalPages <= 1) {
     info.textContent = `${total} oyuncu`;
-    if (first) { first.disabled = true; prev.disabled = true; next.disabled = true; last.disabled = true; }
+    if (first) { first.disabled=true; prev.disabled=true; next.disabled=true; last.disabled=true; }
   } else {
-    const from = page * pageSize + 1, to = Math.min((page + 1) * pageSize, total);
+    const from = page*pageSize+1, to = Math.min((page+1)*pageSize, total);
     info.textContent = `${from}-${to} / ${total}`;
-    if (first) { first.disabled = page === 0; prev.disabled = page === 0; next.disabled = page >= totalPages - 1; last.disabled = page >= totalPages - 1; }
+    if (first) { first.disabled=page===0; prev.disabled=page===0; next.disabled=page>=totalPages-1; last.disabled=page>=totalPages-1; }
   }
   if (allBtn) allBtn.classList.toggle('active-all', showAll);
 }
-
 function goPage(p) {
   const data = getFiltered();
   const totalPages = Math.ceil(data.length / pageSize);
@@ -356,26 +456,15 @@ function goPage(p) {
   showAll = false;
   renderList();
 }
+function toggleAll() { showAll = !showAll; renderList(); }
+function onSearch() { currentPage = 0; showAll = false; renderList(); updateRaffleInfo(); }
 
-function toggleAll() {
-  showAll = !showAll;
-  renderList();
-}
-
-function onSearch() {
-  currentPage = 0;
-  showAll = false;
-  renderList();
-  updateRaffleInfo();
-}
 function updateStats() {
   const done = allPlayers.filter(p => pStatus(p) === 'done').length;
-  const total = allPlayers.length;
-  $('cnt-all').textContent = total;
+  $('cnt-all').textContent = allPlayers.length;
   $('cnt-completed').textContent = done;
-  const lastround = allPlayers.filter(p => p._lastRound === true).length;
   const cntLR = $('cnt-lastround');
-  if (cntLR) cntLR.textContent = lastround;
+  if (cntLR) cntLR.textContent = allPlayers.filter(p => p._lastRound === true).length;
   updateCustomCount();
 }
 function updateCustomCount() {
@@ -406,20 +495,25 @@ async function loadData() {
   $('noteBox').style.display = 'none';
   $('tourTitle').textContent = 'Yükleniyor...';
   $('tourMeta').textContent = '';
-  setLoading('Lichess API\'ye bağlanılıyor...');
+  setLoading('Bağlanılıyor...');
+
+  showPopup();
 
   const type = detectType(urlVal);
   const id = extractId(urlVal);
 
   if (type === 'unknown') {
     showError('Link türü algılanamadı.\nURL\'de "/swiss/" veya "/tournament/" geçmeli.\nÖrnek: https://lichess.org/swiss/D92LT3Oe');
+    closePopup();
     btn.disabled = false;
     return;
   }
 
   try {
     if (type === 'swiss') {
-      setLoading('Swiss turnuva bilgileri alınıyor...');
+      setStep('info');
+      setPopupStatus('Turnuva bilgileri alınıyor...');
+      setPopupProgress(10);
       const infoRes = await fetch(`https://lichess.org/api/swiss/${id}`);
       if (!infoRes.ok) throw new Error(`Turnuva bulunamadı (HTTP ${infoRes.status})\nID: ${id}`);
       const info = await infoRes.json();
@@ -428,8 +522,11 @@ async function loadData() {
       const curRound = info.round || '?';
       $('tourTitle').textContent = info.name || 'Swiss Turnuvası';
       $('tourMeta').textContent = `Swiss · ${maxR} tur · Mevcut tur: ${curRound} · ${info.nbPlayers ?? '?'} oyuncu`;
+      setPopupStatus(`"${info.name}" · ${maxR} tur · ${info.nbPlayers ?? '?'} oyuncu`);
 
-      setLoading('Oyuncu listesi çekiliyor...');
+      setStep('players');
+      setPopupProgress(25);
+      setPopupStatus('Oyuncu listesi çekiliyor...');
       const res = await fetch(`https://lichess.org/api/swiss/${id}/results?nb=9999`);
       if (!res.ok) throw new Error(`Sonuçlar alınamadı (HTTP ${res.status})`);
       const text = await res.text();
@@ -439,9 +536,7 @@ async function loadData() {
       const playerMap = {};
       raw.forEach(p => {
         const name = p.username || p.name || '?';
-        playerMap[name.toLowerCase()] = {
-          _n: name, _r: p.rating || '', _s: p.points ?? 0, _g: -1, _lastRound: false,
-        };
+        playerMap[name.toLowerCase()] = { _n: name, _r: p.rating || '', _s: p.points ?? 0, _g: -1, _lastRound: false };
       });
 
       allPlayers = Object.values(playerMap);
@@ -451,14 +546,17 @@ async function loadData() {
       resetRaffle();
       const _elapsed1 = ((performance.now() - _t0) / 1000).toFixed(1);
       $('tourMeta').textContent += ` · ⏱ liste: ${_elapsed1}s`;
-      $('noteBox').textContent = '⏳ Oyun verileri arka planda yükleniyor... Tamamlayanlar sekmesi hazırlanıyor.';
-      $('noteBox').style.display = 'block';
+      setPopupStatus(`${raw.length} oyuncu yüklendi (${_elapsed1}s) · Oyun verileri işleniyor...`);
+      setPopupProgress(40);
+      setStep('games');
       btn.disabled = false;
 
       (async () => {
         const gRes = await fetch(`https://lichess.org/api/swiss/${id}/games?moves=false&clocks=false&evals=false&opening=false`);
         if (!gRes.ok) {
-          $('noteBox').textContent = '⚠ Oyun verisi alınamadı. Oynanma sayıları hesaplanamadı.';
+          $('noteBox').textContent = '⚠ Oyun verisi alınamadı.';
+          $('noteBox').style.display = 'block';
+          finishPopup('Oyun verisi alınamadı.');
           return;
         }
         const reader = gRes.body.getReader();
@@ -481,15 +579,17 @@ async function loadData() {
               gameOrder.push(key);
               if (playerMap[key]) { playerMap[key]._g === -1 ? playerMap[key]._g = 1 : playerMap[key]._g++; gameCount++; }
               if (gameCount % 200 === 0) {
-                $('noteBox').textContent = `⏳ ${gameCount} oyun işlendi, devam ediyor...`;
+                const pct = Math.min(40 + Math.round((gameCount / (raw.length * maxR / 2)) * 55), 94);
+                setPopupProgress(pct);
+                setPopupStatus(`${gameCount} oyun işlendi...`);
                 allPlayers = Object.values(playerMap);
                 updateStats(); renderList();
               }
             }
           }
         }
-        if (buffer.startsWith('[White "')) { const k=buffer.slice(8,-2).toLowerCase(); if(playerMap[k]) { if(playerMap[k]._g === -1) playerMap[k]._g = 1; else playerMap[k]._g++; } }
-        else if (buffer.startsWith('[Black "')) { const k=buffer.slice(8,-2).toLowerCase(); if(playerMap[k]) { if(playerMap[k]._g === -1) playerMap[k]._g = 1; else playerMap[k]._g++; } }
+        if (buffer.startsWith('[White "')) { const k=buffer.slice(8,-2).toLowerCase(); if(playerMap[k]) { if(playerMap[k]._g===-1) playerMap[k]._g=1; else playerMap[k]._g++; } }
+        else if (buffer.startsWith('[Black "')) { const k=buffer.slice(8,-2).toLowerCase(); if(playerMap[k]) { if(playerMap[k]._g===-1) playerMap[k]._g=1; else playerMap[k]._g++; } }
 
         Object.values(playerMap).forEach(p => { if (p._g === -1) p._g = 0; });
 
@@ -498,21 +598,30 @@ async function loadData() {
         lastRoundPlayers.forEach(name => { if (playerMap[name]) playerMap[name]._lastRound = true; });
         allPlayers = Object.values(playerMap);
         updateStats(); renderList();
+
         const _elapsed2 = ((performance.now() - _t0) / 1000).toFixed(1);
-        $('noteBox').textContent = `✓ Tüm veriler yüklendi. Toplam süre: ${_elapsed2}s · ${gameCount} oyun işlendi.`;
+        const doneCount = allPlayers.filter(p => pStatus(p) === 'done').length;
+        $('tourMeta').textContent = `Swiss · ${maxR} tur · ${info.nbPlayers ?? '?'} oyuncu · ⏱ ${_elapsed2}s`;
+        $('noteBox').style.display = 'none';
+        finishPopup(`${gameCount} oyun işlendi · ${doneCount} tamamladı · Toplam süre: ${_elapsed2}s`);
         updateRaffleInfo();
       })();
 
       return;
 
     } else {
-      setLoading('Arena turnuva bilgileri alınıyor...');
+      setStep('info');
+      setPopupStatus('Arena bilgileri alınıyor...');
+      setPopupProgress(10);
       const infoRes = await fetch(`https://lichess.org/api/tournament/${id}`);
       if (!infoRes.ok) throw new Error(`Turnuva bulunamadı (HTTP ${infoRes.status})\nID: ${id}`);
       const info = await infoRes.json();
       $('tourTitle').textContent = info.fullName || info.name || 'Arena Turnuvası';
+      setPopupStatus(`"${info.fullName || info.name}" yükleniyor...`);
 
-      setLoading('Tüm sayfalar çekiliyor...');
+      setStep('players');
+      setPopupProgress(30);
+      setPopupStatus('Oyuncu sayfaları çekiliyor...');
       let page = 1, hasMore = true;
       while (hasMore && page <= 30) {
         const r = await fetch(`https://lichess.org/api/tournament/${id}?page=${page}`);
@@ -527,6 +636,8 @@ async function loadData() {
           _g: p.nb?.game || 0,
         })));
         hasMore = players.length >= 10;
+        setPopupProgress(Math.min(30 + page * 5, 90));
+        setPopupStatus(`Sayfa ${page} · ${allPlayers.length} oyuncu yüklendi`);
         page++;
       }
       if (!allPlayers.length) throw new Error('Henüz oyuncu yok.');
@@ -536,16 +647,17 @@ async function loadData() {
     }
 
     updateStats();
-    currentFilter = 'all';
     setTab('all');
     $('searchInput').value = '';
     resetRaffle();
     const _elapsed = ((performance.now() - _t0) / 1000).toFixed(1);
     $('tourMeta').textContent += ` · ⏱ ${_elapsed}s`;
     renderList();
+    finishPopup(`${allPlayers.length} oyuncu yüklendi · Toplam süre: ${_elapsed}s`);
 
   } catch (e) {
     showError(e.message);
+    closePopup();
     btn.disabled = false;
   }
 }
@@ -580,28 +692,28 @@ function getActivePool() {
     return true;
   });
 }
-
 function updateRaffleInfo() {
-  const btn = $('raffle-btn');
-  const info = $('raffle-pool-info');
+  const btn = $('raffle-btn'), info = $('raffle-pool-info');
   if (!btn || !info) return;
   const pool = getActivePool();
   const total = allPlayers.filter(p => {
     if (p._g === -1) return false;
     if (currentFilter === 'completed') return pStatus(p) === 'done';
     if (currentFilter === 'lastround') return p._lastRound === true;
-    if (currentFilter === 'custom') {
-      const min = parseInt($('customMin')?.value) || 1;
-      return (p._g ?? 0) >= min;
-    }
+    if (currentFilter === 'custom') { const min=parseInt($('customMin')?.value)||1; return (p._g??0)>=min; }
     return true;
   }).length;
   info.textContent = `${pool.length} / ${total} oyuncu havuzda`;
+  const tn = $('raffle-tour-name');
+  const title = ($('tourTitle').textContent || '').trim();
+  if (tn && title && title !== 'Yükleniyor...' && title !== 'Hata') {
+    tn.textContent = '🏆 ' + title;
+    tn.style.display = 'block';
+  }
   const drawn = raffleDrawn.size;
   btn.textContent = pool.length > 0 ? `🎲 Çek (${drawn}/${total})` : `🎲 Havuz boş (${drawn}/${total})`;
   btn.disabled = pool.length === 0;
 }
-
 function drawRaffle() {
   const pool = getActivePool();
   if (!pool.length) return;
@@ -613,8 +725,7 @@ function drawRaffle() {
   latest.classList.remove('popping');
   void latest.offsetWidth;
   latest.classList.add('popping');
-  latest.innerHTML = `
-    <div class="raffle-latest-name">🎉 ${winner._n}</div>
+  latest.innerHTML = `<div class="raffle-latest-name">🎉 ${winner._n}</div>
     <div class="raffle-latest-sub">${winner._r ? 'Rating: ' + winner._r + ' · ' : ''}Puan: ${winner._s}</div>`;
 
   launchConfetti();
@@ -636,14 +747,11 @@ function drawRaffle() {
   $('raffle-copy').style.display = 'block';
   updateRaffleInfo();
 }
-
 function deleteRaffleEntry(btn, name) {
   raffleDrawn.delete(name);
   btn.closest('.raffle-entry').remove();
   const entries = $('raffle-history').querySelectorAll('.raffle-entry');
-  entries.forEach((el, i) => {
-    el.querySelector('.raffle-entry-num').textContent = (entries.length - i) + '.';
-  });
+  entries.forEach((el, i) => { el.querySelector('.raffle-entry-num').textContent = (entries.length - i) + '.'; });
   if (!raffleDrawn.size) {
     $('raffle-history-label').style.display = 'none';
     $('raffle-reset').style.display = 'none';
@@ -652,38 +760,25 @@ function deleteRaffleEntry(btn, name) {
   }
   updateRaffleInfo();
 }
-
 function launchConfetti() {
   const canvas = $('confetti-canvas');
   const ctx = canvas.getContext('2d');
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
-
   const colors = ['#c8b560','#5cba7d','#6098d4','#d4537e','#e8d080','#5dcaa5'];
   const particles = Array.from({length: 80}, () => ({
-    x: Math.random() * canvas.width,
-    y: Math.random() * canvas.height * 0.4,
-    r: Math.random() * 6 + 3,
-    color: colors[Math.floor(Math.random() * colors.length)],
-    tiltAngle: 0,
-    tiltSpeed: Math.random() * 0.1 + 0.05,
-    vy: Math.random() * 3 + 2,
-    vx: Math.random() * 2 - 1,
-    opacity: 1,
+    x: Math.random()*canvas.width, y: Math.random()*canvas.height*0.4,
+    r: Math.random()*6+3, color: colors[Math.floor(Math.random()*colors.length)],
+    tiltAngle: 0, tiltSpeed: Math.random()*0.1+0.05,
+    vy: Math.random()*3+2, vx: Math.random()*2-1, opacity: 1,
   }));
-
   let frame = 0;
   function animate() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     particles.forEach(p => {
-      p.tiltAngle += p.tiltSpeed;
-      p.y += p.vy;
-      p.x += p.vx;
-      p.opacity -= 0.012;
-      ctx.beginPath();
-      ctx.globalAlpha = Math.max(0, p.opacity);
-      ctx.fillStyle = p.color;
-      ctx.ellipse(p.x, p.y, p.r, p.r * 0.4, Math.sin(p.tiltAngle) * 12, 0, Math.PI * 2);
+      p.tiltAngle += p.tiltSpeed; p.y += p.vy; p.x += p.vx; p.opacity -= 0.012;
+      ctx.beginPath(); ctx.globalAlpha = Math.max(0, p.opacity); ctx.fillStyle = p.color;
+      ctx.ellipse(p.x, p.y, p.r, p.r*0.4, Math.sin(p.tiltAngle)*12, 0, Math.PI*2);
       ctx.fill();
     });
     frame++;
@@ -692,7 +787,6 @@ function launchConfetti() {
   }
   requestAnimationFrame(animate);
 }
-
 function resetRaffle() {
   raffleDrawn.clear();
   $('raffle-latest').style.display = 'none';
@@ -701,6 +795,37 @@ function resetRaffle() {
   $('raffle-reset').style.display = 'none';
   $('raffle-copy').style.display = 'none';
   updateRaffleInfo();
+}
+function takeScreenshot() {
+  const box = document.querySelector('.raffle-box');
+  const btn = document.querySelector('.screenshot-btn');
+  const prevText = btn.textContent;
+  btn.textContent = '⏳ Hazırlanıyor...';
+  btn.style.display = 'none'; // butonu görüntüye dahil etme
+
+  html2canvas(box, {
+    backgroundColor: '#0e0e0e',
+    scale: 2,
+  }).then(canvas => {
+    btn.style.display = 'flex';
+    btn.textContent = prevText;
+    canvas.toBlob(blob => {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      // Turnuva adını dosya adı için temizle
+      let tname = ($('tourTitle').textContent || 'turnuva').trim();
+      tname = tname.replace(/[^a-zA-Z0-9çğıöşüÇĞİÖŞÜ ]/g, '').replace(/\s+/g, '_').slice(0, 50) || 'turnuva';
+      const ts = new Date().toISOString().slice(0,10);
+      a.href = url;
+      a.download = `${tname}_${ts}.png`;
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+  }).catch(e => {
+    btn.style.display = 'flex';
+    btn.textContent = prevText;
+    alert('Ekran görüntüsü alınamadı: ' + e.message);
+  });
 }
 
 function copyRaffle() {
@@ -715,7 +840,7 @@ function copyRaffle() {
 }
 </script>
 <div style="text-align:center; padding: 24px 0 8px; font-family:'IBM Plex Mono',monospace; font-size:11px; color:#444;">
-  Son güncelleme: <span style="color:#666;">17.05.2026 03:00 UTC</span> &nbsp;·&nbsp; build <span style="color:#c8b560;">v1.0.21</span>
+  Son güncelleme: <span style="color:#666;">13.06.2026 23:00 UTC</span> &nbsp;·&nbsp; build <span style="color:#c8b560;">v1.0.22</span>
 </div>
 </body>
 </html>
