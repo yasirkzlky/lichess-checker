@@ -72,7 +72,6 @@
     .badge-absent { background: rgba(217,96,96,0.1); color: var(--red); }
     .badge-loading { background: rgba(136,136,136,0.1); color: var(--muted); }
 
-    .note { font-size: 12px; color: var(--muted); font-family: 'IBM Plex Mono', monospace; padding: 10px 14px; background: var(--surface2); border-left: 2px solid var(--accent); margin-bottom: 16px; }
     .note-box { font-family: 'IBM Plex Mono', monospace; padding: 12px 16px; background: var(--surface2); border-radius: var(--r); margin-bottom: 16px; border: 1px solid var(--border); transition: border-color 0.4s; }
     .note-box.loading { border-color: rgba(217,96,96,0.4); }
     .note-box.done { border-color: rgba(92,186,125,0.4); }
@@ -207,11 +206,7 @@
     <div class="popup-progress"><div class="popup-progress-fill" id="popupProgress"></div></div>
     <div class="popup-status" id="popupStatus">Bağlanılıyor...</div>
     <div class="popup-footer">
-      <label class="popup-check">
-        <input type="checkbox" id="popupDontShow" onchange="saveDontShow(this.checked)" />
-        Bir daha gösterme
-      </label>
-      <button class="popup-close-btn" id="popupCloseBtn" onclick="closePopup()">Tamam ✓</button>
+      <button class="popup-close-btn" id="popupCloseBtn" onclick="closePopup()" style="margin-left:0;">Tamam ✓</button>
     </div>
   </div>
 </div>
@@ -313,14 +308,22 @@ let currentPage = 0, pageSize = 10, showAll = false;
 const $ = id => document.getElementById(id);
 
 // ===== POPUP =====
+// Popup tercihi: localStorage 'lc-popup-show' === '0' ise gizli, aksi halde (varsayılan) gösterilir
+function popupEnabled() {
+  return localStorage.getItem('lc-popup-show') !== '0';
+}
+function togglePopupPref(show) {
+  localStorage.setItem('lc-popup-show', show ? '1' : '0');
+  const cb = $('footerPopupToggle');
+  if (cb) cb.checked = show;
+}
 function showPopup() {
-  if (localStorage.getItem('lc-popup-hide') === '1') return;
+  if (!popupEnabled()) return;
   const overlay = $('loadingPopup');
   overlay.classList.add('visible');
-  $('popupDontShow').checked = false;
   $('popupCloseBtn').classList.remove('visible');
   $('popupSpinner').classList.remove('done');
-  $('popupTitle').textContent = 'Turnuva yükleniyor...';
+  $('popupTitle').textContent = 'Turnuva verileri işleniyor...';
   setStep(null);
   setPopupProgress(0);
   setPopupStatus('Bağlanılıyor...');
@@ -328,37 +331,21 @@ function showPopup() {
 function closePopup() {
   $('loadingPopup').classList.remove('visible');
 }
-function saveDontShow(val) {
-  localStorage.setItem('lc-popup-hide', val ? '1' : '0');
-  const cb = $('footerPopupToggle');
-  if (cb) cb.checked = !val;
-}
 function setStep(active) {
-  // active: 'info' | 'players' | 'games' | null
   const steps = ['info', 'players', 'games'];
-  const labels = { info: 'Turnuva bilgileri', players: 'Oyuncu listesi', games: 'Oyun verileri' };
   const activeIdx = steps.indexOf(active);
   steps.forEach((s, i) => {
     const el = $(`step-${s}`);
     el.className = 'popup-step';
     const icon = el.querySelector('.popup-step-icon');
-    if (i < activeIdx) {
-      el.classList.add('complete');
-      icon.innerHTML = '✓';
-    } else if (i === activeIdx) {
-      el.classList.add('active');
-      icon.innerHTML = '<div class="popup-step-dot"></div>';
-    } else {
-      icon.innerHTML = '<div class="popup-step-dot"></div>';
-    }
+    if (i < activeIdx) { el.classList.add('complete'); icon.innerHTML = '✓'; }
+    else if (i === activeIdx) { el.classList.add('active'); icon.innerHTML = '<div class="popup-step-dot"></div>'; }
+    else { icon.innerHTML = '<div class="popup-step-dot"></div>'; }
   });
 }
-function setPopupProgress(pct) {
-  $('popupProgress').style.width = pct + '%';
-}
+function setPopupProgress(pct) { $('popupProgress').style.width = pct + '%'; }
 function setPopupStatus(msg, pct) {
   $('popupStatus').textContent = msg;
-  // Popup gizli olsa bile bilgileri noteBox'ta göster
   const nb = $('noteBox'), nt = $('noteText'), nf = $('noteProgressFill');
   if (nb && nt) {
     nb.style.display = 'block';
@@ -380,7 +367,6 @@ function finishPopup(msg) {
   setPopupProgress(100);
   $('popupStatus').textContent = msg;
   $('popupCloseBtn').classList.add('visible');
-  // Son bilgiyi noteBox'ta da göster — yeşile dön
   const nb = $('noteBox'), nt = $('noteText'), nf = $('noteProgressFill');
   if (nb && nt) {
     nb.style.display = 'block';
@@ -389,7 +375,6 @@ function finishPopup(msg) {
     nt.innerHTML = '✓ ' + msg;
     if (nf) nf.style.width = '100%';
   }
-  // Auto-close after 3s if user hasn't interacted
   setTimeout(() => closePopup(), 3000);
 }
 
@@ -587,8 +572,6 @@ async function loadData() {
       (async () => {
         const gRes = await fetch(`https://lichess.org/api/swiss/${id}/games?moves=false&clocks=false&evals=false&opening=false`);
         if (!gRes.ok) {
-          $('noteBox').textContent = '⚠ Oyun verisi alınamadı.';
-          $('noteBox').style.display = 'block';
           finishPopup('Oyun verisi alınamadı.');
           return;
         }
@@ -635,7 +618,7 @@ async function loadData() {
         const _elapsed2 = ((performance.now() - _t0) / 1000).toFixed(1);
         const doneCount = allPlayers.filter(p => pStatus(p) === 'done').length;
         $('tourMeta').textContent = `Swiss · ${maxR} tur · ${info.nbPlayers ?? '?'} oyuncu · ⏱ ${_elapsed2}s`;
-        finishPopup(`${gameCount} oyun işlendi · ${doneCount} tamamladı · Toplam süre: ${_elapsed2}s`);
+        finishPopup(`${gameCount} oyun işlendi · ${doneCount} kişi tüm turları oynadı · Toplam süre: ${_elapsed2}s`);
         updateRaffleInfo();
       })();
 
@@ -708,14 +691,10 @@ function copyCompleted() {
 
 $('url').addEventListener('keydown', e => { if (e.key === 'Enter') loadData(); });
 
-// Footer popup toggle — checkbox işaretliyse popup gösterilir
-function togglePopupPref(show) {
-  localStorage.setItem('lc-popup-hide', show ? '0' : '1');
-}
-// Sayfa açılışında checkbox durumunu ayarla
+// Sayfa açılışında popup checkbox durumunu ayarla
 (function initPopupToggle() {
   const cb = $('footerPopupToggle');
-  if (cb) cb.checked = localStorage.getItem('lc-popup-hide') !== '1';
+  if (cb) cb.checked = popupEnabled();
 })();
 
 // ===== ÇEKİLİŞ =====
@@ -843,18 +822,14 @@ function takeScreenshot() {
   const btn = document.querySelector('.screenshot-btn');
   const prevText = btn.textContent;
   btn.textContent = '⏳ Hazırlanıyor...';
-  btn.style.display = 'none'; // butonu görüntüye dahil etme
+  btn.style.display = 'none';
 
-  html2canvas(box, {
-    backgroundColor: '#0e0e0e',
-    scale: 2,
-  }).then(canvas => {
+  html2canvas(box, { backgroundColor: '#0e0e0e', scale: 2 }).then(canvas => {
     btn.style.display = 'flex';
     btn.textContent = prevText;
     canvas.toBlob(blob => {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
-      // Turnuva adını dosya adı için temizle
       let tname = ($('tourTitle').textContent || 'turnuva').trim();
       tname = tname.replace(/[^a-zA-Z0-9çğıöşüÇĞİÖŞÜ ]/g, '').replace(/\s+/g, '_').slice(0, 50) || 'turnuva';
       const ts = new Date().toISOString().slice(0,10);
@@ -869,7 +844,6 @@ function takeScreenshot() {
     alert('Ekran görüntüsü alınamadı: ' + e.message);
   });
 }
-
 function copyRaffle() {
   const names = [...raffleDrawn].join('\n');
   if (!names) return;
@@ -883,11 +857,11 @@ function copyRaffle() {
 </script>
 <div style="text-align:center; padding: 24px 0 8px; font-family:'IBM Plex Mono',monospace; font-size:11px; color:#444;">
   <label style="display:inline-flex; align-items:center; gap:6px; cursor:pointer; color:#666; margin-bottom:10px;">
-    <input type="checkbox" id="footerPopupToggle" onchange="togglePopupPref(this.checked)" style="width:13px; height:13px; accent-color:var(--accent); cursor:pointer;" />
+    <input type="checkbox" id="footerPopupToggle" checked onchange="togglePopupPref(this.checked)" style="width:13px; height:13px; accent-color:var(--accent); cursor:pointer;" />
     Yükleme penceresini göster
   </label>
   <br/>
-  Son güncelleme: <span style="color:#666;">13.06.2026 23:45 UTC</span> &nbsp;·&nbsp; build <span style="color:#c8b560;">v1.0.28</span>
+  Son güncelleme: <span style="color:#666;">14.06.2026 00:45 UTC</span> &nbsp;·&nbsp; build <span style="color:#c8b560;">v1.0.30</span>
 </div>
 </body>
 </html>
