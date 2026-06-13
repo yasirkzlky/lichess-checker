@@ -178,7 +178,7 @@
   <div class="popup-box">
     <div class="popup-header">
       <div class="popup-spinner" id="popupSpinner"></div>
-      <div class="popup-title" id="popupTitle">Turnuva verileri işleniyor...</div>
+      <div class="popup-title" id="popupTitle">Turnuva yükleniyor...</div>
     </div>
     <div class="popup-steps">
       <div class="popup-step" id="step-info">
@@ -317,6 +317,8 @@ function closePopup() {
 }
 function saveDontShow(val) {
   localStorage.setItem('lc-popup-hide', val ? '1' : '0');
+  const cb = $('footerPopupToggle');
+  if (cb) cb.checked = !val;
 }
 function setStep(active) {
   // active: 'info' | 'players' | 'games' | null
@@ -681,6 +683,16 @@ function copyCompleted() {
 
 $('url').addEventListener('keydown', e => { if (e.key === 'Enter') loadData(); });
 
+// Footer popup toggle — checkbox işaretliyse popup gösterilir
+function togglePopupPref(show) {
+  localStorage.setItem('lc-popup-hide', show ? '0' : '1');
+}
+// Sayfa açılışında checkbox durumunu ayarla
+(function initPopupToggle() {
+  const cb = $('footerPopupToggle');
+  if (cb) cb.checked = localStorage.getItem('lc-popup-hide') !== '1';
+})();
+
 // ===== ÇEKİLİŞ =====
 let raffleDrawn = new Set();
 
@@ -845,7 +857,12 @@ function copyRaffle() {
 }
 </script>
 <div style="text-align:center; padding: 24px 0 8px; font-family:'IBM Plex Mono',monospace; font-size:11px; color:#444;">
-  Son güncelleme: <span style="color:#666;">13.06.2026 23:30 UTC</span> &nbsp;·&nbsp; build <span style="color:#c8b560;">v1.0.26</span>
+  <label style="display:inline-flex; align-items:center; gap:6px; cursor:pointer; color:#666; margin-bottom:10px;">
+    <input type="checkbox" id="footerPopupToggle" onchange="togglePopupPref(this.checked)" style="width:13px; height:13px; accent-color:var(--accent); cursor:pointer;" />
+    Yükleme penceresini göster
+  </label>
+  <br/>
+  Son güncelleme: <span style="color:#666;">13.06.2026 23:45 UTC</span> &nbsp;·&nbsp; build <span style="color:#c8b560;">v1.0.27</span>
 </div>
 </body>
 </html>
