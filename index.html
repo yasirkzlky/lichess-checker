@@ -223,6 +223,10 @@
   <div class="card">
     <label>Turnuva Linki</label>
     <input type="text" id="url" placeholder="https://lichess.org/swiss/xxxx  veya  /tournament/xxxx" />
+    <label style="display:inline-flex; align-items:center; gap:6px; cursor:pointer; color:var(--muted); font-size:12px; font-family:'IBM Plex Mono',monospace; margin-top:14px; text-transform:none; letter-spacing:0;">
+      <input type="checkbox" id="footerPopupToggle" checked onchange="togglePopupPref(this.checked)" style="width:14px; height:14px; accent-color:var(--accent); cursor:pointer;" />
+      Yükleme penceresini göster
+    </label>
     <div style="margin-top:12px;">
       <button id="btn" onclick="loadData()">▶ Kontrol Et</button>
     </div>
@@ -618,7 +622,7 @@ async function loadData() {
         const _elapsed2 = ((performance.now() - _t0) / 1000).toFixed(1);
         const doneCount = allPlayers.filter(p => pStatus(p) === 'done').length;
         $('tourMeta').textContent = `Swiss · ${maxR} tur · ${info.nbPlayers ?? '?'} oyuncu · ⏱ ${_elapsed2}s`;
-        finishPopup(`${gameCount} oyun işlendi · ${doneCount} kişi tüm turları oynadı · Toplam süre: ${_elapsed2}s`);
+        finishPopup(`${gameCount} oyun işlendi · ${doneCount} tamamladı · Toplam süre: ${_elapsed2}s`);
         updateRaffleInfo();
       })();
 
@@ -856,12 +860,7 @@ function copyRaffle() {
 }
 </script>
 <div style="text-align:center; padding: 24px 0 8px; font-family:'IBM Plex Mono',monospace; font-size:11px; color:#444;">
-  <label style="display:inline-flex; align-items:center; gap:6px; cursor:pointer; color:#666; margin-bottom:10px;">
-    <input type="checkbox" id="footerPopupToggle" checked onchange="togglePopupPref(this.checked)" style="width:13px; height:13px; accent-color:var(--accent); cursor:pointer;" />
-    Yükleme penceresini göster
-  </label>
-  <br/>
-  Son güncelleme: <span style="color:#666;">14.06.2026 00:45 UTC</span> &nbsp;·&nbsp; build <span style="color:#c8b560;">v1.0.30</span>
+  Son güncelleme: <span style="color:#666;">14.06.2026 01:00 UTC</span> &nbsp;·&nbsp; build <span style="color:#c8b560;">v1.0.31</span>
 </div>
 </body>
 </html>
