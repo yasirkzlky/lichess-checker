@@ -73,6 +73,16 @@
     .badge-loading { background: rgba(136,136,136,0.1); color: var(--muted); }
 
     .note { font-size: 12px; color: var(--muted); font-family: 'IBM Plex Mono', monospace; padding: 10px 14px; background: var(--surface2); border-left: 2px solid var(--accent); margin-bottom: 16px; }
+    .note-box { font-family: 'IBM Plex Mono', monospace; padding: 12px 16px; background: var(--surface2); border-radius: var(--r); margin-bottom: 16px; border: 1px solid var(--border); transition: border-color 0.4s; }
+    .note-box.loading { border-color: rgba(217,96,96,0.4); }
+    .note-box.done { border-color: rgba(92,186,125,0.4); }
+    .note-text { font-size: 13px; color: var(--text); margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+    .note-progress { height: 5px; background: var(--border); border-radius: 3px; overflow: hidden; }
+    .note-progress-fill { height: 100%; width: 0%; border-radius: 3px; background: var(--red); transition: width 0.4s ease, background 0.5s ease; }
+    .note-box.loading .note-progress-fill { background: var(--red); }
+    .note-box.done .note-progress-fill { background: var(--green); width: 100% !important; }
+    @keyframes note-pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+    .note-box.loading .note-text { animation: note-pulse 1.5s ease-in-out infinite; }
     .error-box { padding: 14px 16px; background: rgba(217,96,96,0.07); border: 1px solid rgba(217,96,96,0.2); border-radius: var(--r); color: var(--red); font-family: 'IBM Plex Mono', monospace; font-size: 13px; white-space: pre-line; }
     .loading-row { display: flex; align-items: center; gap: 10px; padding: 28px 16px; color: var(--muted); font-size: 13px; font-family: 'IBM Plex Mono', monospace; }
     .spinner { width: 16px; height: 16px; border: 2px solid var(--border2); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; flex-shrink: 0; }
@@ -178,7 +188,7 @@
   <div class="popup-box">
     <div class="popup-header">
       <div class="popup-spinner" id="popupSpinner"></div>
-      <div class="popup-title" id="popupTitle">Turnuva yükleniyor...</div>
+      <div class="popup-title" id="popupTitle">Turnuva verileri işleniyor...</div>
     </div>
     <div class="popup-steps">
       <div class="popup-step" id="step-info">
@@ -226,7 +236,10 @@
   <div id="results">
     <div class="tour-title" id="tourTitle"></div>
     <div class="tour-meta" id="tourMeta"></div>
-    <div id="noteBox" class="note" style="display:none;"></div>
+    <div id="noteBox" class="note-box" style="display:none;">
+      <div class="note-text" id="noteText"></div>
+      <div class="note-progress"><div class="note-progress-fill" id="noteProgressFill"></div></div>
+    </div>
 
     <div class="main-layout">
       <div class="list-col">
@@ -343,11 +356,17 @@ function setStep(active) {
 function setPopupProgress(pct) {
   $('popupProgress').style.width = pct + '%';
 }
-function setPopupStatus(msg) {
+function setPopupStatus(msg, pct) {
   $('popupStatus').textContent = msg;
   // Popup gizli olsa bile bilgileri noteBox'ta göster
-  const nb = $('noteBox');
-  if (nb) { nb.textContent = '⏳ ' + msg; nb.style.display = 'block'; }
+  const nb = $('noteBox'), nt = $('noteText'), nf = $('noteProgressFill');
+  if (nb && nt) {
+    nb.style.display = 'block';
+    nb.classList.add('loading');
+    nb.classList.remove('done');
+    nt.innerHTML = '<span class="spinner" style="width:13px;height:13px;border-width:2px;"></span>' + msg;
+    if (nf && typeof pct === 'number') nf.style.width = pct + '%';
+  }
 }
 function finishPopup(msg) {
   $('popupSpinner').classList.add('done');
@@ -361,9 +380,15 @@ function finishPopup(msg) {
   setPopupProgress(100);
   $('popupStatus').textContent = msg;
   $('popupCloseBtn').classList.add('visible');
-  // Son bilgiyi noteBox'ta da göster
-  const nb = $('noteBox');
-  if (nb) { nb.textContent = '✓ ' + msg; nb.style.display = 'block'; }
+  // Son bilgiyi noteBox'ta da göster — yeşile dön
+  const nb = $('noteBox'), nt = $('noteText'), nf = $('noteProgressFill');
+  if (nb && nt) {
+    nb.style.display = 'block';
+    nb.classList.remove('loading');
+    nb.classList.add('done');
+    nt.innerHTML = '✓ ' + msg;
+    if (nf) nf.style.width = '100%';
+  }
   // Auto-close after 3s if user hasn't interacted
   setTimeout(() => closePopup(), 3000);
 }
@@ -520,7 +545,7 @@ async function loadData() {
   try {
     if (type === 'swiss') {
       setStep('info');
-      setPopupStatus('Turnuva bilgileri alınıyor...');
+      setPopupStatus('Turnuva bilgileri alınıyor...', 10);
       setPopupProgress(10);
       const infoRes = await fetch(`https://lichess.org/api/swiss/${id}`);
       if (!infoRes.ok) throw new Error(`Turnuva bulunamadı (HTTP ${infoRes.status})\nID: ${id}`);
@@ -530,11 +555,11 @@ async function loadData() {
       const curRound = info.round || '?';
       $('tourTitle').textContent = info.name || 'Swiss Turnuvası';
       $('tourMeta').textContent = `Swiss · ${maxR} tur · Mevcut tur: ${curRound} · ${info.nbPlayers ?? '?'} oyuncu`;
-      setPopupStatus(`"${info.name}" · ${maxR} tur · ${info.nbPlayers ?? '?'} oyuncu`);
+      setPopupStatus(`"${info.name}" · ${maxR} tur · ${info.nbPlayers ?? '?'} oyuncu`, 20);
 
       setStep('players');
       setPopupProgress(25);
-      setPopupStatus('Oyuncu listesi çekiliyor...');
+      setPopupStatus('Oyuncu listesi çekiliyor...', 25);
       const res = await fetch(`https://lichess.org/api/swiss/${id}/results?nb=9999`);
       if (!res.ok) throw new Error(`Sonuçlar alınamadı (HTTP ${res.status})`);
       const text = await res.text();
@@ -554,7 +579,7 @@ async function loadData() {
       resetRaffle();
       const _elapsed1 = ((performance.now() - _t0) / 1000).toFixed(1);
       $('tourMeta').textContent += ` · ⏱ liste: ${_elapsed1}s`;
-      setPopupStatus(`${raw.length} oyuncu yüklendi (${_elapsed1}s) · Oyun verileri işleniyor...`);
+      setPopupStatus(`${raw.length} oyuncu yüklendi (${_elapsed1}s) · Oyun verileri işleniyor...`, 40);
       setPopupProgress(40);
       setStep('games');
       btn.disabled = false;
@@ -589,7 +614,7 @@ async function loadData() {
               if (gameCount % 200 === 0) {
                 const pct = Math.min(40 + Math.round((gameCount / (raw.length * maxR / 2)) * 55), 94);
                 setPopupProgress(pct);
-                setPopupStatus(`${gameCount} oyun işlendi...`);
+                setPopupStatus(`${gameCount} oyun işlendi...`, pct);
                 allPlayers = Object.values(playerMap);
                 updateStats(); renderList();
               }
@@ -618,17 +643,17 @@ async function loadData() {
 
     } else {
       setStep('info');
-      setPopupStatus('Arena bilgileri alınıyor...');
+      setPopupStatus('Arena bilgileri alınıyor...', 10);
       setPopupProgress(10);
       const infoRes = await fetch(`https://lichess.org/api/tournament/${id}`);
       if (!infoRes.ok) throw new Error(`Turnuva bulunamadı (HTTP ${infoRes.status})\nID: ${id}`);
       const info = await infoRes.json();
       $('tourTitle').textContent = info.fullName || info.name || 'Arena Turnuvası';
-      setPopupStatus(`"${info.fullName || info.name}" yükleniyor...`);
+      setPopupStatus(`"${info.fullName || info.name}" yükleniyor...`, 25);
 
       setStep('players');
       setPopupProgress(30);
-      setPopupStatus('Oyuncu sayfaları çekiliyor...');
+      setPopupStatus('Oyuncu sayfaları çekiliyor...', 35);
       let page = 1, hasMore = true;
       while (hasMore && page <= 30) {
         const r = await fetch(`https://lichess.org/api/tournament/${id}?page=${page}`);
@@ -644,7 +669,7 @@ async function loadData() {
         })));
         hasMore = players.length >= 10;
         setPopupProgress(Math.min(30 + page * 5, 90));
-        setPopupStatus(`Sayfa ${page} · ${allPlayers.length} oyuncu yüklendi`);
+        setPopupStatus(`Sayfa ${page} · ${allPlayers.length} oyuncu yüklendi`, Math.min(35 + page * 5, 90));
         page++;
       }
       if (!allPlayers.length) throw new Error('Henüz oyuncu yok.');
@@ -862,7 +887,7 @@ function copyRaffle() {
     Yükleme penceresini göster
   </label>
   <br/>
-  Son güncelleme: <span style="color:#666;">13.06.2026 23:45 UTC</span> &nbsp;·&nbsp; build <span style="color:#c8b560;">v1.0.27</span>
+  Son güncelleme: <span style="color:#666;">13.06.2026 23:45 UTC</span> &nbsp;·&nbsp; build <span style="color:#c8b560;">v1.0.28</span>
 </div>
 </body>
 </html>
